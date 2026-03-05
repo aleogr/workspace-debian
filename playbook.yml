@@ -12,21 +12,21 @@
       encrypt: "sha512_crypt"
 
   roles:
-    # 1. Configurações base do SO (Sudo, Repositórios, Logs)
+    # 1. Base OS configurations (Sudo, Repositories, Logs)
     - name: Base System Configuration
       role: system
       tags:
         - sys
         - system
 
-    # 2. Otimizações de Kernel e Performance (Z790 / NVMe / CPU)
+    # 2. Kernel and Performance tuning (Z790 / NVMe / CPU)
     - name: Hardware Performance Tuning
       role: hardware
       tags:
         - hw
         - hardware
 
-    # 3. Camada de Segurança (YubiKey / PAM)
+    # 3. Security layer (YubiKey / PAM)
     - name: Security and Authentication
       role: security
       when: setup_security
@@ -34,28 +34,28 @@
         - sec
         - security
 
-    # 4. Interface Gráfica (GNOME Minimal)
+    # 4. Graphical Interface (Minimal GNOME)
     - name: Desktop Environment
       role: desktop
       tags:
         - desk
         - desktop
 
-    # 5. Core de Virtualização (QEMU / Libvirt / LVM)
+    # 5. Virtualization Core (QEMU / Libvirt / LVM)
     - name: Virtualization Suite
       role: virtualization
       tags:
         - virt
         - virtualization
 
-    # 6. Pilha de Rede (Bridges / VLAN 6 UniFi)
+    # 6. Network Stack (Bridges / VLAN 6 UniFi)
     - name: Network and Bridge Configuration
       role: network
       tags:
         - net
         - network
 
-    # 7. Proteção de Dados (Snapshot Inicial)
+    # 7. Data Protection (Initial Snapshot)
     - name: System Snapshots
       role: snapshots
       when: create_initial_snapshot
