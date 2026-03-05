@@ -1,5 +1,5 @@
 ---
-# 1. Cleanup
+# 1. Cleanup old configurations
 - name: Create backup directory for old repository files
   file:
     path: /etc/apt/sources.list.d/backup_old
@@ -19,8 +19,8 @@
     dest: /etc/apt/sources.list
     content: "# Main repositories moved to /etc/apt/sources.list.d/debian.sources\n"
 
-# 2. Reconstruction
-- name: Create clean Debian 13 (Trixie) base repositories (DEB822)
+# 2. Rebuild repositories in DEB822 format
+- name: Create clean Debian base repositories
   copy:
     dest: /etc/apt/sources.list.d/debian.sources
     content: |
@@ -36,7 +36,7 @@
       Components: main contrib non-free non-free-firmware
       Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-# 3. Update
+# 3. System Update
 - name: Update apt cache and perform dist-upgrade
   apt:
     update_cache: yes
