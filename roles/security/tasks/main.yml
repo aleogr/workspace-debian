@@ -6,7 +6,7 @@
 
 - name: Check if YubiKey registration file exists
   stat:
-    path: "/home/aleogr/.config/Yubico/u2f_keys"
+    path: "/home/{{ main_user }}/.config/Yubico/u2f_keys"
   register: yubikey_file
 
 - name: Enable YubiKey Authentication in PAM
@@ -24,5 +24,5 @@
 
 - name: Warn if YubiKey file is missing
   debug:
-    msg: "WARNING: YubiKey file not found. PAM was NOT modified."
+    msg: "WARNING: YubiKey file not found at /home/{{ main_user }}/.config/Yubico/u2f_keys. PAM was NOT modified to prevent lockout."
   when: not yubikey_file.stat.exists
