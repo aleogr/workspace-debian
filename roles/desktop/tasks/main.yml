@@ -1,1 +1,13 @@
-a
+---
+- name: Install minimal GNOME Desktop environment
+  apt:
+    pkg:
+      - gnome-shell
+      - gnome-terminal
+      - gdm3
+
+- name: Enable GDM3 display manager
+  systemctl:
+    name: gdm3
+    enabled: yes
+    state: started
