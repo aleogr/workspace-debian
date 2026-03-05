@@ -1,22 +1,28 @@
 ---
-- name: Install NetworkManager
+- name: Install NetworkManager and GNOME integration
   apt:
     pkg:
       - network-manager
       - network-manager-gnome
 
-- name: Disable legacy networking
+- name: Disable and stop legacy networking service
   systemctl:
     name: networking
     enabled: no
     state: stopped
 
-- name: Remove legacy interfaces file
+- name: Remove legacy network interfaces file
   file:
     path: /etc/network/interfaces
     state: absent
 
-- name: Create Bridge interface
+- name: Ensure NetworkManager is enabled and started
+  systemctl:
+    name: NetworkManager
+    enabled: yes
+    state: started
+
+- name: Create Bridge interface (vlan-vm.bridge)
   nmcli:
     type: bridge
     conn_name: vlan-vm.bridge
@@ -33,9 +39,15 @@
     master: vlan-vm.bridge
     state: present
 
-- name: Define and start Libvirt bridge network
+- name: Bring up Bridge and VLAN connections
+  shell: |
+    nmcli con up vlan-vm.bridge
+    nmcli con up eno2.vlan-vm
+  changed_when: false
+
+- name: Configure Libvirt network for the bridge
   block:
-    - name: Generate Libvirt network XML
+    - name: Generate Libvirt network XML file
       copy:
         dest: /tmp/vlan-vm.bridge.xml
         content: |
@@ -45,7 +57,7 @@
             <bridge name='vlan-vm.bridge'/>
           </network>
 
-    - name: Define Libvirt network from XML
+    - name: Define and autostart Libvirt network
       virt_net:
         name: vlan-vm.bridge
         command: define
