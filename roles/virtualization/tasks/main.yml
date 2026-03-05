@@ -1,5 +1,5 @@
 ---
-- name: Install all QEMU architectures and Libvirt tools
+- name: Install QEMU architectures and Virtualization tools
   apt:
     pkg:
       - qemu-kvm
@@ -34,7 +34,7 @@
     enabled: yes
     state: started
 
-- name: Create Logical Volume for VMs using remaining space
+- name: Create Logical Volume lv-vms using remaining space
   lvol:
     vg: vg-debian
     lv: lv-vms
