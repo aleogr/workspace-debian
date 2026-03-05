@@ -3,7 +3,7 @@
   hosts: workstation
   become: yes
   vars:
-    setup_security: true  # Set to false when running on a VM
+    setup_security: true  # Toggle to false for Virtual Machine environments
   roles:
     - system
     - { role: security, when: setup_security }
