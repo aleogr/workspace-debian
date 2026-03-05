@@ -1,5 +1,5 @@
 ---
-- name: Configure Debian 13 Workstation
+- name: Configure High-Performance Virtualization Workstation
   hosts: workstation
   become: yes
   vars:
