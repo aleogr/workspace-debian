@@ -8,7 +8,7 @@
     state: present
 
 - name: Ensure GDM3 is enabled and started
-  systemctl:
+  systemd:
     name: gdm3
     enabled: yes
     state: started
