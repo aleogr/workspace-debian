@@ -1,5 +1,5 @@
 ---
-# 1. Instalação e Limpeza de Legado
+# 1. Instalação e Preparação (Roda em qualquer lugar)
 - name: Install NetworkManager packages
   apt:
     pkg:
@@ -7,50 +7,56 @@
       - network-manager-gnome
     state: present
 
-- name: Disable legacy networking service
-  systemd:
-    name: networking
-    enabled: no
-    state: stopped
-
-- name: Remove legacy interfaces file
-  file:
-    path: /etc/network/interfaces
-    state: absent
-
-- name: Ensure NetworkManager is started
+# 2. Transição de Serviços (Com cuidado para não travar o Ansible)
+- name: Ensure NetworkManager is started and enabled
   systemd:
     name: NetworkManager
     enabled: yes
     state: started
 
-# 2. Configuração da Infraestrutura de Rede (L2)
-- name: Create Bridge interface ({{ bridge_name | default('br0') }})
-  community.general.nmcli:
-    conn_name: "{{ bridge_name | default('br0') }}"
-    ifname: "{{ bridge_name | default('br0') }}"
-    type: bridge
-    stp: no
-    state: present
-  notify: Restart NetworkManager
+# 3. Configurações Avançadas (APENAS para Hardware Real)
+# Usamos o bloco 'when' para garantir que Bridges/VLANs não quebrem a rede da VM
+- name: Configure High Performance Networking (Physical Hardware Only)
+  block:
+    - name: Disable legacy networking service
+      systemd:
+        name: networking
+        enabled: no
+        state: stopped
 
-- name: Create VLAN {{ vlan_id }} on {{ physical_interface }}
-  community.general.nmcli:
-    conn_name: "{{ physical_interface }}.vlan-vm"
-    ifname: "{{ physical_interface }}.{{ vlan_id }}"
-    type: vlan
-    vlanid: "{{ vlan_id }}"
-    vlandev: "{{ physical_interface }}"
-    master: "{{ bridge_name | default('br0') }}"
-    state: present
-  notify: Restart NetworkManager
+    - name: Remove legacy interfaces file
+      file:
+        path: /etc/network/interfaces
+        state: absent
 
-# 3. Ativação das Conexões
-- name: Bring up connections
-  shell: |
-    nmcli con up "{{ bridge_name | default('br0') }}"
-    nmcli con up "{{ physical_interface }}.vlan-vm"
-  changed_when: false
+    - name: Create Bridge interface ({{ bridge_name | default('br0') }})
+      community.general.nmcli:
+        conn_name: "{{ bridge_name | default('br0') }}"
+        ifname: "{{ bridge_name | default('br0') }}"
+        type: bridge
+        stp: no
+        state: present
+      notify: Restart NetworkManager
+
+    - name: Create VLAN {{ vlan_id }} on {{ physical_interface }}
+      community.general.nmcli:
+        conn_name: "{{ physical_interface }}.vlan-vm"
+        ifname: "{{ physical_interface }}.{{ vlan_id }}"
+        type: vlan
+        vlanid: "{{ vlan_id }}"
+        vlandev: "{{ physical_interface }}"
+        master: "{{ bridge_name | default('br0') }}"
+        state: present
+      notify: Restart NetworkManager
+
+    - name: Bring up connections
+      shell: |
+        nmcli con up "{{ bridge_name | default('br0') }}"
+        nmcli con up "{{ physical_interface }}.vlan-vm"
+      changed_when: false
+
+  # ESTA É A CHAVE: Só executa se NÃO for uma máquina virtual
+  when: ansible_virtualization_type == 'none'
 
 # 4. Integração com Libvirt (Virtualização)
 - name: Configure Libvirt bridge network
@@ -72,3 +78,5 @@
         xml: "{{ lookup('file', '/tmp/' + (bridge_name | default('br0')) + '.xml') }}"
         autostart: yes
         state: active
+  # Também protegemos o Libvirt para não tentar subir uma bridge inexistente na VM
+  when: ansible_virtualization_type == 'none'
