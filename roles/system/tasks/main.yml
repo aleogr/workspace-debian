@@ -6,9 +6,15 @@
 
 - name: Install base tools
   apt:
-    pkg: [build-essential, fastfetch, htop, hwloc, sudo]
+    pkg:
+      - build-essential
+      - fastfetch
+      - htop
+      - hwloc
+      - sudo
+    state: present
 
-- name: Configure user password and shell
+- name: Ensure main user has the provided password
   user:
     name: "{{ main_user }}"
     password: "{{ user_password }}"
@@ -22,9 +28,10 @@
     dest: "/etc/sudoers.d/{{ main_user }}"
     mode: '0440'
 
-- name: Optimize journald log size
+- name: Optimize journald log size limits (500MB max)
   lineinfile:
     path: /etc/systemd/journald.conf
     regexp: "^#?SystemMaxUse="
     line: "SystemMaxUse={{ journal_max_size }}"
+    state: present
   notify: Restart journald
