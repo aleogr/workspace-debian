@@ -1,9 +1,3 @@
-Entendi o que aconteceu. O Markdown é "traiçoeiro" quando tentamos colocar blocos de código dentro de outros blocos de código. Para resolver isso e permitir que você copie o conteúdo **exato** sem erros de formatação, vou usar uma técnica de blocos alternativos.
-
-Basta copiar o conteúdo entre as linhas tracejadas abaixo:
-
----
-
 # 🛠️ Debian 13 (Trixie) Workstation Automation
 
 **Infrastructure as Code (IaC)** repository to transform a High-End Desktop into a professional **Virtualization Workstation** based on Debian 13.
