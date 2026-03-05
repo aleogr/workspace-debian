@@ -1,21 +1,16 @@
 ---
 # 1. Update PAM Configuration
-# This ensures that any changes to common-auth or common-password are
-# correctly synchronized within the system's PAM stack.
 - name: Update PAM
   command: pam-auth-update --package
+  # Usamos changed_when: true porque este comando sempre precisa rodar se notificado
   changed_when: true
 
 # 2. Update Initramfs
-# Any changes to security modules, drivers, or core cryptsetup 
-# configurations require an initramfs refresh to take effect at boot.
 - name: Update Initramfs
   command: update-initramfs -u
   listen: "refresh security"
 
 # 3. Reload Systemd Daemon
-# Useful for applying changes to any security-related systemd unit 
-# overrides or service configurations.
 - name: Reload Systemd
-  systemctl:
+  systemd:
     daemon_reload: yes
