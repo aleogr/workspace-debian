@@ -1,20 +1,16 @@
 ---
-# 1. Package Installation
-- name: Install security and authentication packages
+- name: Install security packages
   apt:
     pkg:
       - libpam-u2f
       - libpam-pwquality
     state: present
 
-# 2. YubiKey Infrastructure (Centralized approach)
 - name: Create Yubico configuration directory
   file:
     path: /etc/Yubico
     state: directory
     mode: '0755'
-    owner: root
-    group: root
 
 - name: Ensure U2F mapping file exists
   file:
@@ -24,23 +20,20 @@
     modification_time: preserve
     access_time: preserve
 
-# 3. PAM Hardening (Password Quality)
-- name: Configure PAM Password Quality (Enforce strong passwords)
+- name: Configure PAM Password Quality
   lineinfile:
     path: /etc/pam.d/common-password
     line: "password requisite pam_pwquality.so retry=3 minlen=12 difok=4 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1 enforce_for_root"
     insertbefore: BOF
     state: present
 
-# 4. YubiKey Authentication Configuration
-# We check if the mapping file has content before enforcing it to avoid lockouts
 - name: Check if YubiKey mappings are defined
   command: grep -q ":" /etc/Yubico/u2f_mappings
   register: yubikey_check
   failed_when: false
   changed_when: false
 
-- name: Enable YubiKey Authentication in PAM (Sudo and Login)
+- name: Enable YubiKey Authentication in PAM
   lineinfile:
     path: "/etc/pam.d/{{ item }}"
     insertafter: "@include common-auth"
@@ -51,6 +44,7 @@
     - gdm-password
     - login
   when: yubikey_check.rc == 0
+  notify: Update PAM
 
 - name: Debug YubiKey status
   debug:
