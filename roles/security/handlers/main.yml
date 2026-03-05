@@ -1,1 +1,20 @@
-a
+---
+# 1. Update PAM Configuration
+# This ensures that any changes to common-auth or common-password are
+# correctly synchronized within the system's PAM stack.
+- name: Update PAM
+  command: pam-auth-update --package
+  changed_when: true
+
+# 2. Update Initramfs
+# Although we are not using the ZFS unlock service, any changes to 
+# security modules or core cryptsetup configs may require an initramfs refresh.
+- name: Update Initramfs
+  command: update-initramfs -u
+  listen: "refresh security"
+
+# 3. Reload Systemd Daemon
+# Useful if we add any security-related systemd overrides in the future.
+- name: Reload Systemd
+  systemctl:
+    daemon_reload: yes
