@@ -1,4 +1,5 @@
 ---
+# 1. Tool Installation
 - name: Install backup and monitoring tools
   apt:
     pkg:
@@ -6,6 +7,7 @@
       - inotify-tools
     state: present
 
+# 2. Timeshift Configuration
 - name: Ensure Timeshift is configured for RSYNC mode
   copy:
     dest: /etc/timeshift/timeshift.json
@@ -34,6 +36,7 @@
     mode: '0644'
     force: no
 
+# 3. Baseline Protection
 - name: Create initial system snapshot
   command: timeshift --create --comments "Initial Provisioning via Ansible" --tags D
   register: timeshift_result
