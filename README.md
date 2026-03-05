@@ -10,7 +10,7 @@ Developed and tested on the following high-performance specifications:
 
 | Component | Model | Role |
 | --- | --- | --- |
-| **CPU** | Intel Core i9-13900K (24 Cores) | Hybrid Arch (P-Cores/E-Cores) Tuning |
+| **CPU** | Intel Core i9-13900K | Hybrid Arch (P-Cores/E-Cores) Tuning |
 | **GPU** | NVIDIA GeForce RTX 3090 Ti | Host Native Acceleration (GNOME) |
 | **RAM** | 64GB DDR5 | Performance Governor + VM Allocation |
 | **SSD** | NVMe Gen4 512GB | **LVM-on-LUKS (OS + VM Logical Volumes)** |
