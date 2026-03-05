@@ -15,7 +15,6 @@ Developed and tested on the following high-performance specifications:
 | **RAM** | 64GB DDR5 | Performance Governor + VM Allocation |
 | **SSD** | NVMe Gen4 512GB | **LVM-on-LUKS (OS + VM Logical Volumes)** |
 | **Motherboard** | ASUS ROG MAXIMUS Z790 HERO | Virtualization & IOMMU Support |
-| **Networking** | Intel® 2.5Gb Ethernet (eno2) | VLAN 6 Tagged Bridge (UniFi) |
 
 ## 📋 Prerequisites
 
