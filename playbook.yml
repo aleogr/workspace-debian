@@ -12,21 +12,28 @@
       encrypt: "sha512_crypt"
 
   roles:
-    # 1. Base OS configurations (Sudo, Repositories, Logs)
+    # 1. APT Infrastructure (Scorched Earth & DEB822 Sources)
+    - name: Repository Management
+      role: repository
+      tags:
+        - repo
+        - repository
+
+    # 2. Base OS (Users, Sudo, Logs, Tuning)
     - name: Base System Configuration
       role: system
       tags:
         - sys
         - system
 
-    # 2. Kernel and Performance tuning (Z790 / NVMe / CPU)
+    # 3. Performance Tuning (Z790 / NVMe / CPU)
     - name: Hardware Performance Tuning
       role: hardware
       tags:
         - hw
         - hardware
 
-    # 3. Security layer (YubiKey / PAM)
+    # 4. Security layer (YubiKey / PAM Hardening)
     - name: Security and Authentication
       role: security
       when: setup_security
@@ -34,28 +41,28 @@
         - sec
         - security
 
-    # 4. Graphical Interface (Minimal GNOME)
+    # 5. Graphical Interface (Minimal GNOME)
     - name: Desktop Environment
       role: desktop
       tags:
         - desk
         - desktop
 
-    # 5. Virtualization Core (QEMU / Libvirt / LVM)
+    # 6. Virtualization Core (QEMU / Libvirt / LVM)
     - name: Virtualization Suite
       role: virtualization
       tags:
         - virt
         - virtualization
 
-    # 6. Network Stack (Bridges / VLAN 6 UniFi)
+    # 7. Network Stack (Bridges / VLAN 6)
     - name: Network and Bridge Configuration
       role: network
       tags:
         - net
         - network
 
-    # 7. Data Protection (Initial Snapshot)
+    # 8. Data Protection (Initial Snapshot)
     - name: System Snapshots
       role: snapshots
       when: create_initial_snapshot
