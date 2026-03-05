@@ -1,14 +1,10 @@
 ---
-# 1. Safety Check
 - name: Verify if running on a Physical Machine
   ansible.builtin.fail:
     msg: "Aborting: Hardware performance tuning should not run on a Guest Virtual Machine."
   when: ansible_virtualization_role == "guest"
 
-# 2. Kernel Optimization (GRUB)
-# nvme_core.default_ps_max_latency_us=0: Prevents NVMe Gen4/Gen5 from entering deep sleep, avoiding micro-stutter.
-# split_lock_detect=off: Prevents performance hits in certain virtualization and gaming workloads.
-- name: Optimize Kernel Parameters for NVMe and CPU performance in GRUB
+- name: Optimize Kernel Parameters in GRUB
   ansible.builtin.lineinfile:
     path: /etc/default/grub
     regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
@@ -16,13 +12,12 @@
     state: present
   notify: Update GRUB
 
-# 3. CPU Governor Configuration
-- name: Install CPU frequency management tools
+- name: Install CPU management tools
   apt:
     name: cpufrequtils
     state: present
 
-- name: Set CPU Governor to Performance mode (Z790 P-Cores/E-Cores optimization)
+- name: Set CPU Governor to Performance mode
   lineinfile:
     path: /etc/default/cpufrequtils
     regexp: '^GOVERNOR='
@@ -30,8 +25,7 @@
     state: present
   notify: Restart cpufrequtils
 
-# 4. Hardware Monitoring Tools
-- name: Install hardware monitoring and diagnostic tools
+- name: Install monitoring tools
   apt:
     pkg:
       - lm-sensors
