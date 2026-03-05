@@ -27,9 +27,13 @@ Developed and tested on the following high-performance specifications:
 
 ### 2. Bootstrap (On Fresh Debian 13)
 
-Install Ansible and Git on your local machine:
+Before running the automation, you must install the base tools. If you installed Debian via ISO/DVD, you might need to disable the CD-ROM repository first to avoid errors.
 
 ```
+# 1. Disable CD-ROM repository (fixes 'Release file' errors)
+sudo sed -i 's/^deb cdrom/# deb cdrom/' /etc/apt/sources.list
+
+# 2. Install base requirements
 sudo apt update && sudo apt install -y ansible git
 
 ```
