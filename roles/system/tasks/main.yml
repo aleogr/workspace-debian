@@ -4,7 +4,7 @@
     update_cache: yes
     upgrade: dist
 
-- name: Install build-essential and tools
+- name: Install build-essential and base tools
   apt:
     pkg:
       - build-essential
