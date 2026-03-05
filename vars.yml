@@ -2,6 +2,9 @@
 # User Configuration
 main_user: "aleogr"
 
+# System Configuration
+debian_codename: "trixie"
+
 # Network Configuration (UniFi / Z790 Hero)
 physical_interface: "eno2"
 vlan_id: 6
