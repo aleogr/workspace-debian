@@ -18,3 +18,11 @@
     content: "aleogr ALL=(ALL) ALL"
     dest: /etc/sudoers.d/aleogr
     mode: '0440'
+
+- name: Optimize journald log size limits (500MB max)
+  lineinfile:
+    path: /etc/systemd/journald.conf
+    regexp: "^#?SystemMaxUse="
+    line: "SystemMaxUse=500M"
+    state: present
+  notify: Restart journald
