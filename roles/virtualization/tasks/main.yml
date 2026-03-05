@@ -1,5 +1,5 @@
 ---
-- name: Install QEMU, Libvirt, and Performance tools
+- name: Install QEMU architectures and Virtualization tools
   apt:
     pkg:
       - qemu-kvm
@@ -23,11 +23,14 @@
       - ovmf
       - tuned
       - tuned-utils
+    state: present
 
-- name: Add user aleogr to virtualization groups
+- name: Add user to virtualization groups
   user:
-    name: aleogr
-    groups: kvm,libvirt
+    name: "{{ main_user }}"
+    groups:
+      - kvm
+      - libvirt
     append: yes
 
 - name: Set performance profile to virtual-host
@@ -45,15 +48,15 @@
     - "lxc.d"
     - "network.d"
 
-- name: Create Logical Volume lv-vms using remaining space
+- name: Create Logical Volume for VMs using remaining space
   lvol:
-    vg: vg-debian
-    lv: lv-vms
+    vg: "{{ volume_group }}"
+    lv: "{{ vm_lv_name }}"
     size: 100%FREE
     state: present
 
-- name: Ensure libvirtd is started
+- name: Ensure libvirtd is enabled and running
   systemctl:
     name: libvirtd
-    state: started
     enabled: yes
+    state: started
