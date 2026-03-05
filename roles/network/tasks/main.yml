@@ -1,13 +1,14 @@
 ---
-- name: Install NetworkManager
+# 1. Instalação e Limpeza de Legado
+- name: Install NetworkManager packages
   apt:
     pkg:
       - network-manager
       - network-manager-gnome
     state: present
 
-- name: Disable legacy networking
-  systemctl:
+- name: Disable legacy networking service
+  systemd:
     name: networking
     enabled: no
     state: stopped
@@ -18,50 +19,56 @@
     state: absent
 
 - name: Ensure NetworkManager is started
-  systemctl:
+  systemd:
     name: NetworkManager
     enabled: yes
     state: started
 
-- name: Create Bridge interface ({{ bridge_name }})
-  nmcli:
+# 2. Configuração da Infraestrutura de Rede (L2)
+- name: Create Bridge interface ({{ bridge_name | default('br0') }})
+  community.general.nmcli:
+    conn_name: "{{ bridge_name | default('br0') }}"
+    ifname: "{{ bridge_name | default('br0') }}"
     type: bridge
-    conn_name: "{{ bridge_name }}"
-    ifname: "{{ bridge_name }}"
     stp: no
     state: present
+  notify: Restart NetworkManager
 
 - name: Create VLAN {{ vlan_id }} on {{ physical_interface }}
-  nmcli:
-    type: vlan
+  community.general.nmcli:
     conn_name: "{{ physical_interface }}.vlan-vm"
+    ifname: "{{ physical_interface }}.{{ vlan_id }}"
+    type: vlan
     vlanid: "{{ vlan_id }}"
     vlandev: "{{ physical_interface }}"
-    master: "{{ bridge_name }}"
+    master: "{{ bridge_name | default('br0') }}"
     state: present
+  notify: Restart NetworkManager
 
+# 3. Ativação das Conexões
 - name: Bring up connections
   shell: |
-    nmcli con up {{ bridge_name }}
-    nmcli con up {{ physical_interface }}.vlan-vm
+    nmcli con up "{{ bridge_name | default('br0') }}"
+    nmcli con up "{{ physical_interface }}.vlan-vm"
   changed_when: false
 
+# 4. Integração com Libvirt (Virtualização)
 - name: Configure Libvirt bridge network
   block:
     - name: Generate Libvirt network XML
       copy:
-        dest: "/tmp/{{ bridge_name }}.xml"
+        dest: "/tmp/{{ bridge_name | default('br0') }}.xml"
         content: |
           <network>
-            <name>{{ bridge_name }}</name>
+            <name>{{ bridge_name | default('br0') }}</name>
             <forward mode='bridge'/>
-            <bridge name='{{ bridge_name }}'/>
+            <bridge name='{{ bridge_name | default('br0') }}'/>
           </network>
 
     - name: Define and start Libvirt network
       virt_net:
-        name: "{{ bridge_name }}"
+        name: "{{ bridge_name | default('br0') }}"
         command: define
-        xml: "{{ lookup('file', '/tmp/' + bridge_name + '.xml') }}"
+        xml: "{{ lookup('file', '/tmp/' + (bridge_name | default('br0')) + '.xml') }}"
         autostart: yes
         state: active
