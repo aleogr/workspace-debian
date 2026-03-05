@@ -1,5 +1,5 @@
 ---
-- name: Install QEMU architectures and Virtualization tools
+- name: Install QEMU, Libvirt, and Performance tools
   apt:
     pkg:
       - qemu-kvm
@@ -21,6 +21,8 @@
       - bridge-utils
       - virt-manager
       - ovmf
+      - tuned
+      - tuned-utils
 
 - name: Add user aleogr to virtualization groups
   user:
@@ -28,11 +30,20 @@
     groups: kvm,libvirt
     append: yes
 
-- name: Ensure libvirtd is enabled and running
-  systemctl:
-    name: libvirtd
-    enabled: yes
-    state: started
+- name: Set performance profile to virtual-host
+  command: tuned-adm profile virtual-host
+  changed_when: false
+
+- name: Create Libvirt hooks directory structure
+  file:
+    path: "/etc/libvirt/hooks/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - ""
+    - "qemu.d"
+    - "lxc.d"
+    - "network.d"
 
 - name: Create Logical Volume lv-vms using remaining space
   lvol:
@@ -40,3 +51,9 @@
     lv: lv-vms
     size: 100%FREE
     state: present
+
+- name: Ensure libvirtd is started
+  systemctl:
+    name: libvirtd
+    state: started
+    enabled: yes
