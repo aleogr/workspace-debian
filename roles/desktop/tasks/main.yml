@@ -5,6 +5,7 @@
       - gnome-shell
       - gnome-terminal
       - gdm3
+    state: present
 
 - name: Enable GDM3 display manager
   systemctl:
