@@ -5,10 +5,11 @@
   vars:
     setup_security: true
     create_initial_snapshot: true
+
   roles:
-    - system
-    - { role: security, when: setup_security }
-    - desktop
-    - virtualization
-    - network
-    - { role: snapshots, when: create_initial_snapshot }
+    - { role: system, tags: ['sys', 'base'] }
+    - { role: security, when: setup_security, tags: ['sec', 'yubikey'] }
+    - { role: desktop, tags: ['desk', 'ui'] }
+    - { role: virtualization, tags: ['virt', 'kvm'] }
+    - { role: network, tags: ['net', 'unifi'] }
+    - { role: snapshots, when: create_initial_snapshot, tags: ['snap', 'backup'] }
