@@ -2,8 +2,11 @@
 - name: Configure Debian 13 Workstation
   hosts: workstation
   become: yes
+  vars:
+    setup_security: true  # Set to false when running on a VM
   roles:
     - system
+    - { role: security, when: setup_security }
     - desktop
     - virtualization
     - network
