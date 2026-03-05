@@ -1,0 +1,11 @@
+# Ansible temporary files
+*.retry
+*.log
+.ansible/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Credentials (safety first)
+u2f_keys
