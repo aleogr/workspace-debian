@@ -10,18 +10,18 @@ Developed and tested on the following high-performance specifications:
 
 | Component | Model | Role |
 | --- | --- | --- |
-| **CPU** | Intel Core i9-13900K | Hybrid Arch (P-Cores/E-Cores) Tuning |
+| **CPU** | Intel Core i9-13900K (24 Cores) | Hybrid Arch (P-Cores/E-Cores) Tuning |
 | **GPU** | NVIDIA GeForce RTX 3090 Ti | Host Native Acceleration (GNOME) |
 | **RAM** | 64GB DDR5 | Performance Governor + VM Allocation |
 | **SSD** | NVMe Gen4 512GB | **LVM-on-LUKS (OS + VM Logical Volumes)** |
-| **Motherboard** | ASUS ROG MAXIMUS Z790 HERO | Virtualization & IOMMU |
+| **Motherboard** | ASUS ROG MAXIMUS Z790 HERO | Virtualization & IOMMU Support |
 | **Networking** | Intel® 2.5Gb Ethernet (eno2) | VLAN 6 Tagged Bridge (UniFi) |
 
 ## 📋 Prerequisites
 
 ### 1. BIOS Settings (Dual-Boot & Security Friendly)
 
-* **Secure Boot:** **Enabled** (Compatible with Debian 13 and Windows 11).
+* **Secure Boot:** **Enabled** (Fully compatible with Debian 13 and Windows 11).
 * **VT-d / VT-x:** **Enabled** (Required for KVM/QEMU).
 * **Primary Display:** **PEG / PCIe GPU**.
 * **Re-Size BAR:** **Enabled**.
@@ -30,15 +30,15 @@ Developed and tested on the following high-performance specifications:
 
 Install Ansible and Git on your local machine:
 
-```bash
+```
 sudo apt update && sudo apt install -y ansible git
 
 ```
 
 ### 3. Clone Repository
 
-```bash
-git clone https://github.com/aleogr/debian-workstation.git
+```
+git clone [https://github.com/aleogr/debian-workstation.git](https://github.com/aleogr/debian-workstation.git)
 cd debian-workstation
 
 ```
@@ -47,9 +47,9 @@ cd debian-workstation
 
 ### 1. Configure Variables
 
-Edit the `vars.yml` file. This file centralizes your hardware-specific names. For this specific hardware, ensure `physical_interface` is set to `eno2`.
+Edit the `vars.yml` file. This file centralizes your hardware-specific names. For this hardware, ensure `physical_interface` is set to `eno2`.
 
-```yaml
+```
 main_user: "aleogr"
 physical_interface: "eno2"
 vlan_id: 6
@@ -61,7 +61,7 @@ volume_group: "vg-debian"
 
 The script will prompt you for your **Main User Password**. This password will be securely hashed (SHA512) and applied to your Linux account.
 
-```bash
+```
 # Full execution (Physical Hardware)
 ansible-playbook -i inventory.ini playbook.yml -K
 
@@ -72,16 +72,17 @@ ansible-playbook -i inventory.ini playbook.yml -K --skip-tags "hw"
 
 ## 📂 Project Structure
 
-```text
+```
 debian-automation/
 ├── inventory.ini         # Localhost connection definition
 ├── playbook.yml          # Main Playbook (Orchestration)
 ├── vars.yml              # Global Variables (Interfaces, Codename, LVM)
+├── security-key-setup.sh # Helper script for Multi-Key registration
 └── roles/                # Modular Tasks & Handlers
     ├── repository/       # "Scorched Earth" APT policy & DEB822 sources
     ├── system/           # Intel-Microcode, Swappiness, Inotify, Journald
     ├── hardware/         # NVMe Gen4 Latency Fix, CPU Performance mode
-    ├── security/         # PAM Hardening, YubiKey U2F Centralized Auth
+    ├── security/         # PAM Hardening, Multi-Authenticator U2F Auth
     ├── desktop/          # Minimal GNOME Shell environment
     ├── virtualization/   # KVM, Libvirt stack, 100% FREE LVM allocation
     ├── network/          # NetworkManager Bridge + VLAN 6 (eno2)
@@ -95,17 +96,17 @@ debian-automation/
 
 The `security` role enforces **PAM Password Quality**. New passwords must be at least **12 characters** long and include Uppercase, Lowercase, Numbers, and Symbols.
 
-### 2. Registering YubiKeys
+### 2. Registering Security Keys (2FA)
 
-Authentication via YubiKey is prepared but not enforced until you register your keys. To enable 2FA for Sudo and Login:
+The system supports any U2F/FIDO2 compatible physical keys (YubiKey, Google Titan, SoloKeys, etc.). To register your keys before enforcing them:
 
-```bash
-# Create the entry for your user in the centralized mapping file
-pamu2fcfg -u aleogr | sudo tee -a /etc/Yubico/u2f_mappings
+```
+# Run the provided helper script
+sudo ./security-key-setup.sh
 
 ```
 
-Once at least one key is present in `/etc/Yubico/u2f_mappings`, the system will automatically require the YubiKey touch for Sudo and GDM login.
+Once at least one key is present in `/etc/security-keys/u2f_mappings`, the Ansible playbook will automatically enable the requirement for a physical touch during Sudo and Login.
 
 ## ⚠️ Disclaimer
 
