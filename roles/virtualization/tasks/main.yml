@@ -1,4 +1,17 @@
 ---
+# 1. Hardware Validation (Hardware Real Only)
+- name: Verify CPU virtualization support (VT-x/AMD-V)
+  shell: grep -E 'vmx|svm' /proc/cpuinfo
+  register: cpu_virt
+  ignore_errors: yes
+  changed_when: false
+
+- name: Fail if virtualization is disabled in BIOS
+  fail:
+    msg: "ERRO: Virtualização desligada na BIOS. Ative VT-x/SVM na sua Z790!"
+  when: cpu_virt.rc != 0 and ansible_virtualization_type == 'none'
+
+# 2. Software Installation
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -54,6 +67,8 @@
     lv: "{{ vm_lv_name }}"
     size: 100%FREE
     state: present
+  # Evita erro de 'shrinking' se o volume já existir
+  ignore_errors: yes
 
 - name: Ensure libvirtd is started
   systemd:
