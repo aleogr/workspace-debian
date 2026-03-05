@@ -1,5 +1,4 @@
 ---
-# 1. GNOME Desktop Installation
 - name: Install minimal GNOME Desktop components
   apt:
     pkg:
@@ -8,8 +7,7 @@
       - gdm3
     state: present
 
-# 2. Service Management
-- name: Ensure GDM3 display manager is enabled and started
+- name: Ensure GDM3 is enabled and started
   systemctl:
     name: gdm3
     enabled: yes
