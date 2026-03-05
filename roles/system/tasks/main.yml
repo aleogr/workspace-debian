@@ -18,18 +18,3 @@
     content: "aleogr ALL=(ALL) ALL"
     dest: /etc/sudoers.d/aleogr
     mode: '0440'
-
-- name: Configure swap file (59605MB)
-  shell: |
-    if [ ! -f /swap/swapfile ]; then
-      mkdir -p /swap
-      touch /swap/swapfile
-      chmod 600 /swap/swapfile
-      chattr +C /swap/swapfile
-      dd if=/dev/zero of=/swap/swapfile bs=1M count=59605 status=progress
-      mkswap /swap/swapfile
-      swapon /swap/swapfile
-      echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
-    fi
-  args:
-    creates: /swap/swapfile
