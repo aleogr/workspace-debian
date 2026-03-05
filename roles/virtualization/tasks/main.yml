@@ -1,5 +1,6 @@
 ---
-- name: Install QEMU architectures and Virtualization tools
+# 1. Virtualization Stack Installation
+- name: Install QEMU architectures and Virtualization management tools
   apt:
     pkg:
       - qemu-kvm
@@ -25,7 +26,8 @@
       - tuned-utils
     state: present
 
-- name: Add user to virtualization groups
+# 2. User Permissions
+- name: Add main user to virtualization groups
   user:
     name: "{{ main_user }}"
     groups:
@@ -33,11 +35,13 @@
       - libvirt
     append: yes
 
-- name: Set performance profile to virtual-host
+# 3. Performance Profile
+- name: Set performance profile to virtual-host using Tuned
   command: tuned-adm profile virtual-host
   changed_when: false
 
-- name: Create Libvirt hooks directory structure
+# 4. Libvirt Hooks Structure
+- name: Create Libvirt hooks directory structure for custom scripts
   file:
     path: "/etc/libvirt/hooks/{{ item }}"
     state: directory
@@ -48,14 +52,16 @@
     - "lxc.d"
     - "network.d"
 
-- name: Create Logical Volume for VMs using remaining space
+# 5. Storage Allocation
+- name: Create Logical Volume for Virtual Machines using remaining VG space
   lvol:
     vg: "{{ volume_group }}"
     lv: "{{ vm_lv_name }}"
     size: 100%FREE
     state: present
 
-- name: Ensure libvirtd is enabled and running
+# 6. Service Activation
+- name: Ensure libvirtd service is enabled and running
   systemctl:
     name: libvirtd
     enabled: yes
