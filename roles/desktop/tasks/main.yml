@@ -1,5 +1,5 @@
 ---
-- name: Install minimal GNOME Desktop environment
+- name: Install minimal GNOME Desktop components
   apt:
     pkg:
       - gnome-shell
