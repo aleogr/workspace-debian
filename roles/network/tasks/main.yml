@@ -1,32 +1,28 @@
 ---
-# 1. NetworkManager Installation
-- name: Install NetworkManager and GNOME integration
+- name: Install NetworkManager
   apt:
     pkg:
       - network-manager
       - network-manager-gnome
     state: present
 
-# 2. Legacy Cleanup
-- name: Disable and stop legacy networking service
+- name: Disable legacy networking
   systemctl:
     name: networking
     enabled: no
     state: stopped
 
-- name: Remove legacy network interfaces file to avoid conflicts
+- name: Remove legacy interfaces file
   file:
     path: /etc/network/interfaces
     state: absent
 
-# 3. Service Management
-- name: Ensure NetworkManager is enabled and started
+- name: Ensure NetworkManager is started
   systemctl:
     name: NetworkManager
     enabled: yes
     state: started
 
-# 4. Bridge and VLAN Configuration (UniFi Integration)
 - name: Create Bridge interface ({{ bridge_name }})
   nmcli:
     type: bridge
@@ -35,7 +31,7 @@
     stp: no
     state: present
 
-- name: Create VLAN {{ vlan_id }} on {{ physical_interface }} and attach to bridge
+- name: Create VLAN {{ vlan_id }} on {{ physical_interface }}
   nmcli:
     type: vlan
     conn_name: "{{ physical_interface }}.vlan-vm"
@@ -44,16 +40,15 @@
     master: "{{ bridge_name }}"
     state: present
 
-- name: Bring up Bridge and VLAN connections
+- name: Bring up connections
   shell: |
     nmcli con up {{ bridge_name }}
     nmcli con up {{ physical_interface }}.vlan-vm
   changed_when: false
 
-# 5. Libvirt Network Definition
-- name: Configure Libvirt network for the bridge
+- name: Configure Libvirt bridge network
   block:
-    - name: Generate Libvirt network XML file
+    - name: Generate Libvirt network XML
       copy:
         dest: "/tmp/{{ bridge_name }}.xml"
         content: |
@@ -63,7 +58,7 @@
             <bridge name='{{ bridge_name }}'/>
           </network>
 
-    - name: Define and autostart Libvirt network bridge
+    - name: Define and start Libvirt network
       virt_net:
         name: "{{ bridge_name }}"
         command: define
