@@ -1,0 +1,19 @@
+---
+# User Configuration
+main_user: "aleogr"
+
+# Network Configuration (UniFi / Z790 Hero)
+physical_interface: "eno2"
+vlan_id: 6
+bridge_name: "vlan-vm.bridge"
+
+# Storage Configuration (LVM)
+volume_group: "vg-debian"
+vm_lv_name: "lv-vms"
+
+# System Limits
+journal_max_size: "500M"
+
+# Feature Toggles (True/False)
+setup_security: true
+create_initial_snapshot: true
