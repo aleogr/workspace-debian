@@ -7,14 +7,15 @@
   changed_when: true
 
 # 2. Update Initramfs
-# Although we are not using the ZFS unlock service, any changes to 
-# security modules or core cryptsetup configs may require an initramfs refresh.
+# Any changes to security modules, drivers, or core cryptsetup 
+# configurations require an initramfs refresh to take effect at boot.
 - name: Update Initramfs
   command: update-initramfs -u
   listen: "refresh security"
 
 # 3. Reload Systemd Daemon
-# Useful if we add any security-related systemd overrides in the future.
+# Useful for applying changes to any security-related systemd unit 
+# overrides or service configurations.
 - name: Reload Systemd
   systemctl:
     daemon_reload: yes
