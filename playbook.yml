@@ -3,10 +3,12 @@
   hosts: workstation
   become: yes
   vars:
-    setup_security: true  # Toggle to false for Virtual Machine environments
+    setup_security: true
+    create_initial_snapshot: true
   roles:
     - system
     - { role: security, when: setup_security }
     - desktop
     - virtualization
     - network
+    - { role: snapshots, when: create_initial_snapshot }
