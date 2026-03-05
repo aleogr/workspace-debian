@@ -56,7 +56,7 @@
     state: present
 
 - name: Ensure libvirtd is started
-  systemctl:
+  systemd:
     name: libvirtd
     enabled: yes
     state: started
