@@ -4,7 +4,7 @@
     update_cache: yes
     upgrade: dist
 
-- name: Install build-essential and system utilities
+- name: Install build-essential and tools
   apt:
     pkg:
       - build-essential
@@ -12,23 +12,17 @@
       - htop
       - hwloc
       - sudo
-      - libpam-u2f
 
-- name: Configure sudoers permissions for aleogr
+- name: Configure sudoers for aleogr
   copy:
     content: "aleogr ALL=(ALL) ALL"
     dest: /etc/sudoers.d/aleogr
     mode: '0440'
 
-- name: Create swap directory
-  file:
-    path: /swap
-    state: directory
-    mode: '0755'
-
 - name: Configure swap file (59605MB)
   shell: |
     if [ ! -f /swap/swapfile ]; then
+      mkdir -p /swap
       touch /swap/swapfile
       chmod 600 /swap/swapfile
       chattr +C /swap/swapfile
@@ -39,13 +33,3 @@
     fi
   args:
     creates: /swap/swapfile
-
-- name: Enable PAM U2F authentication
-  lineinfile:
-    path: "/etc/pam.d/{{ item }}"
-    insertafter: "@include common-auth"
-    line: "auth required pam_u2f.so"
-  loop:
-    - sudo
-    - gdm-password
-    - login
