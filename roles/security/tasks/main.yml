@@ -1,52 +1,58 @@
 ---
-- name: Install security packages
+# 1. Package Installation
+- name: Install security and authentication packages
   apt:
     pkg:
       - libpam-u2f
       - libpam-pwquality
     state: present
 
-- name: Create Yubico configuration directory
+# 2. Security Key Infrastructure (Generic approach)
+- name: Create security keys configuration directory
   file:
-    path: /etc/Yubico
+    path: /etc/security-keys
     state: directory
     mode: '0755'
+    owner: root
+    group: root
 
-- name: Ensure U2F mapping file exists
+- name: Ensure security keys mapping file exists
   file:
-    path: /etc/Yubico/u2f_mappings
+    path: /etc/security-keys/u2f_mappings
     state: touch
     mode: '0644'
     modification_time: preserve
     access_time: preserve
 
-- name: Configure PAM Password Quality
+# 3. PAM Hardening (Password Quality)
+- name: Configure PAM Password Quality (Enforce strong passwords)
   lineinfile:
     path: /etc/pam.d/common-password
     line: "password requisite pam_pwquality.so retry=3 minlen=12 difok=4 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1 enforce_for_root"
     insertbefore: BOF
     state: present
 
-- name: Check if YubiKey mappings are defined
-  command: grep -q ":" /etc/Yubico/u2f_mappings
-  register: yubikey_check
+# 4. Security Key Authentication Configuration
+- name: Check if security keys are registered
+  command: grep -q ":" /etc/security-keys/u2f_mappings
+  register: auth_keys_check
   failed_when: false
   changed_when: false
 
-- name: Enable YubiKey Authentication in PAM
+- name: Enable Security Key Authentication in PAM (Sudo and Login)
   lineinfile:
     path: "/etc/pam.d/{{ item }}"
     insertafter: "@include common-auth"
-    line: "auth required pam_u2f.so authfile=/etc/Yubico/u2f_mappings cue"
+    line: "auth required pam_u2f.so authfile=/etc/security-keys/u2f_mappings cue"
     state: present
   loop:
     - sudo
     - gdm-password
     - login
-  when: yubikey_check.rc == 0
+  when: auth_keys_check.rc == 0
   notify: Update PAM
 
-- name: Debug YubiKey status
+- name: Debug Security Key status
   debug:
-    msg: "YubiKey authentication NOT enabled. Please add your keys to /etc/Yubico/u2f_mappings first."
-  when: yubikey_check.rc != 0
+    msg: "Security Key auth NOT enabled. Run security-key-setup.sh first."
+  when: auth_keys_check.rc != 0
