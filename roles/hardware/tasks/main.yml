@@ -4,7 +4,7 @@
     msg: "Aborting: Hardware tuning should not run on a Virtual Machine."
   when: ansible_virtualization_role == "guest"
 
-- name: Optimize Kernel Parameters for NVMe and CPU (GRUB)
+- name: Optimize Kernel Parameters for NVMe and CPU in GRUB
   ansible.builtin.lineinfile:
     path: /etc/default/grub
     regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
@@ -12,7 +12,7 @@
     state: present
   notify: Update GRUB
 
-- name: Configure CPU Governor for Performance
+- name: Install CPU frequency management tools
   apt:
     name: cpufrequtils
     state: present
