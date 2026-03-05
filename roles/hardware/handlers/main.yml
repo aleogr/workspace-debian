@@ -1,1 +1,8 @@
-a
+---
+- name: Update GRUB
+  command: update-grub
+
+- name: Restart cpufrequtils
+  systemctl:
+    name: cpufrequtils
+    state: restarted
