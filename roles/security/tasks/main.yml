@@ -1,28 +1,58 @@
 ---
-- name: Install PAM U2F module
+# 1. Package Installation
+- name: Install security and authentication packages
   apt:
-    name: libpam-u2f
+    pkg:
+      - libpam-u2f
+      - libpam-pwquality
     state: present
 
-- name: Check if YubiKey registration file exists
-  stat:
-    path: "/home/{{ main_user }}/.config/Yubico/u2f_keys"
-  register: yubikey_file
+# 2. YubiKey Infrastructure (Centralized approach)
+- name: Create Yubico configuration directory
+  file:
+    path: /etc/Yubico
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
 
-- name: Enable YubiKey Authentication in PAM
+- name: Ensure U2F mapping file exists
+  file:
+    path: /etc/Yubico/u2f_mappings
+    state: touch
+    mode: '0644'
+    modification_time: preserve
+    access_time: preserve
+
+# 3. PAM Hardening (Password Quality)
+- name: Configure PAM Password Quality (Enforce strong passwords)
+  lineinfile:
+    path: /etc/pam.d/common-password
+    line: "password requisite pam_pwquality.so retry=3 minlen=12 difok=4 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1 enforce_for_root"
+    insertbefore: BOF
+    state: present
+
+# 4. YubiKey Authentication Configuration
+# We check if the mapping file has content before enforcing it to avoid lockouts
+- name: Check if YubiKey mappings are defined
+  command: grep -q ":" /etc/Yubico/u2f_mappings
+  register: yubikey_check
+  failed_when: false
+  changed_when: false
+
+- name: Enable YubiKey Authentication in PAM (Sudo and Login)
   lineinfile:
     path: "/etc/pam.d/{{ item }}"
     insertafter: "@include common-auth"
-    line: "auth required pam_u2f.so"
+    line: "auth required pam_u2f.so authfile=/etc/Yubico/u2f_mappings cue"
     state: present
   loop:
     - sudo
     - gdm-password
     - login
-  when: yubikey_file.stat.exists
-  tags: yubikey
+  when: yubikey_check.rc == 0
 
-- name: Warn if YubiKey file is missing
+- name: Debug YubiKey status
   debug:
-    msg: "WARNING: YubiKey file not found at /home/{{ main_user }}/.config/Yubico/u2f_keys. PAM was NOT modified to prevent lockout."
-  when: not yubikey_file.stat.exists
+    msg: "YubiKey authentication NOT enabled. Please add your keys to /etc/Yubico/u2f_mappings first."
+  when: yubikey_check.rc != 0
