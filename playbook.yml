@@ -1,0 +1,9 @@
+---
+- name: Configure Debian 13 Workstation
+  hosts: workstation
+  become: yes
+  roles:
+    - system
+    - desktop
+    - virtualization
+    - network
