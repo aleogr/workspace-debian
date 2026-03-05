@@ -1,1 +1,28 @@
-a
+---
+- name: Install PAM U2F module
+  apt:
+    name: libpam-u2f
+    state: present
+
+- name: Check if YubiKey key file exists
+  stat:
+    path: "/home/aleogr/.config/Yubico/u2f_keys"
+  register: yubikey_file
+
+- name: Enable YubiKey Authentication in PAM
+  lineinfile:
+    path: "/etc/pam.d/{{ item }}"
+    insertafter: "@include common-auth"
+    line: "auth required pam_u2f.so"
+    state: present
+  loop:
+    - sudo
+    - gdm-password
+    - login
+  when: yubikey_file.stat.exists
+  tags: yubikey
+
+- name: Warn if YubiKey file is missing
+  debug:
+    msg: "WARNING: YubiKey file not found. PAM modules were NOT modified to prevent lockout."
+  when: not yubikey_file.stat.exists
