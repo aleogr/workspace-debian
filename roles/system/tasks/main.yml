@@ -1,5 +1,13 @@
 ---
-# 1. Essential Packages
+# 1. Health Audit & Essential Packages
+- name: Ensure no broken packages or interrupted installs
+  command: dpkg --configure -a
+  changed_when: false
+
+- name: Audit package manager health
+  command: apt-get check
+  changed_when: false
+
 - name: Install administration and hardware support tools
   apt:
     pkg:
