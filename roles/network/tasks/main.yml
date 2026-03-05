@@ -1,4 +1,5 @@
 ---
+# 1. NetworkManager Installation
 - name: Install NetworkManager and GNOME integration
   apt:
     pkg:
@@ -6,23 +7,26 @@
       - network-manager-gnome
     state: present
 
+# 2. Legacy Cleanup
 - name: Disable and stop legacy networking service
   systemctl:
     name: networking
     enabled: no
     state: stopped
 
-- name: Remove legacy network interfaces file
+- name: Remove legacy network interfaces file to avoid conflicts
   file:
     path: /etc/network/interfaces
     state: absent
 
+# 3. Service Management
 - name: Ensure NetworkManager is enabled and started
   systemctl:
     name: NetworkManager
     enabled: yes
     state: started
 
+# 4. Bridge and VLAN Configuration (UniFi Integration)
 - name: Create Bridge interface ({{ bridge_name }})
   nmcli:
     type: bridge
@@ -46,6 +50,7 @@
     nmcli con up {{ physical_interface }}.vlan-vm
   changed_when: false
 
+# 5. Libvirt Network Definition
 - name: Configure Libvirt network for the bridge
   block:
     - name: Generate Libvirt network XML file
@@ -58,7 +63,7 @@
             <bridge name='{{ bridge_name }}'/>
           </network>
 
-    - name: Define and autostart Libvirt network
+    - name: Define and autostart Libvirt network bridge
       virt_net:
         name: "{{ bridge_name }}"
         command: define
