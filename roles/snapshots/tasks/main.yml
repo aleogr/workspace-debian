@@ -32,7 +32,7 @@
         "rrsync_mode": "true"
       }
     mode: '0644'
-    force: no # Only creates if not already configured
+    force: no
 
 - name: Create initial system snapshot
   command: timeshift --create --comments "Initial Provisioning via Ansible" --tags D
