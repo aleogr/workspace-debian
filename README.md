@@ -4,17 +4,6 @@
 
 This project replaces manual configurations with **Ansible**, providing idempotency and modularity for complex setups involving LVM-on-LUKS, KVM/Libvirt, and 2FA Security. The architecture is specifically optimized for the **Intel Core i9-13900K** and **ASUS ROG Z790 HERO** ecosystem, designed to safely coexist with a native Windows 11 Dual-Boot.
 
-## ✨ Key Features & Intelligent Logic
-
-Diferente de scripts comuns, este playbook inclui proteções de nível empresarial:
-
-* **🧠 Detecção Inteligente de Ambiente**: O sistema identifica se está rodando em **Hardware Real** ou **Máquina Virtual (VirtualBox/KVM)**. Configurações críticas de rede (Bridges/VLANs) são ignoradas em VMs para evitar perda de conectividade.
-* **🛡️ Validação de Hardware (Fail-Fast)**: Verifica se a Virtualização (VT-x) está ativa na BIOS antes de iniciar a instalação, evitando falhas silenciosas no KVM.
-* **⚡ Snapshots Assíncronos**: O backup inicial via Timeshift é executado em modo assíncrono com *timeout* de 20 minutos, garantindo que o playbook não trave se o processo de disco demorar.
-* **🚦 Auditoria de Saúde do Sistema**: Executa automaticamente `dpkg --configure -a` e `apt check` para corrigir instalações interrompidas antes de aplicar novas mudanças.
-* **🔒 Segurança Multi-Fator (2FA)**: Implementação nativa de PAM para chaves físicas (Yubikey/FIDO2) integrada ao GNOME Login e Sudo.
-* **🚀 Performance Tuning**: Perfil `tuned-adm` para Virtual Host, otimização de Swappiness (10), Inotify e limites de Log (Journald).
-
 ## ⚙️ Target Hardware
 
 | Component | Model | Role |
