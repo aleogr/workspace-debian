@@ -1,5 +1,5 @@
 ---
-# 1. Instalação e Preparação
+# 1. Instalação e Preparação (Essencial para ambos)
 - name: Install NetworkManager packages
   apt:
     pkg:
