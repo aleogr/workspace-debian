@@ -35,7 +35,6 @@ sudo sed -i 's/^deb cdrom/# deb cdrom/' /etc/apt/sources.list
 
 # 2. Install base requirements
 sudo apt update && sudo apt install -y ansible git
-
 ```
 
 ### 3. Clone Repository
@@ -43,7 +42,6 @@ sudo apt update && sudo apt install -y ansible git
 ```
 git clone https://github.com/aleogr/workspace-debian.git
 cd workspace-debian
-
 ```
 
 ## 🚀 Usage
@@ -57,7 +55,6 @@ main_user: "aleogr"
 physical_interface: "eno2"
 vlan_id: 6
 volume_group: "vg-debian"
-
 ```
 
 ### 2. Run the Playbook
@@ -66,7 +63,6 @@ The script will prompt you for your **Main User Password**. This password will b
 
 ```
 ansible-playbook -i inventory.ini playbook.yml -K
-
 ```
 
 ## 📂 Project Structure
@@ -86,7 +82,6 @@ debian-automation/
     ├── virtualization/   # KVM, Libvirt stack, 100% FREE LVM allocation
     ├── network/          # NetworkManager Bridge + VLAN 6 (eno2)
     └── snapshots/        # Timeshift automated recovery points
-
 ```
 
 ## ✋ Security & Manual Steps
@@ -102,7 +97,6 @@ The system supports any U2F/FIDO2 compatible physical keys (YubiKey, Google Tita
 ```
 # Run the provided helper script
 sudo ./security-key-setup.sh
-
 ```
 
 Once at least one key is present in `/etc/security-keys/u2f_mappings`, the Ansible playbook will automatically enable the requirement for a physical touch during Sudo and Login.
