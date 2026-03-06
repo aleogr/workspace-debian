@@ -1,5 +1,5 @@
 ---
-# 1. Hardware Validation (Lógica Ultra-Clean sem logs vermelhos)
+# 1. Hardware Validation
 - name: Check CPU Virtualization Flags
   shell: grep -cE 'vmx|svm' /proc/cpuinfo
   register: cpu_check
@@ -13,15 +13,15 @@
 
 - name: "Report Virtualization Status (Guest/VM)"
   debug:
-    msg: "INFO: Rodando em ambiente virtual. Virtualização aninhada não disponível (comportamento esperado)."
+    msg: "INFO: Rodando em ambiente virtual. Virtualização aninhada não disponível (esperado)."
   when: cpu_check.stdout == "0" and ansible_virtualization_type != 'none'
 
 - name: "STOP: BIOS Configuration Error"
   fail:
-    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na sua ASUS Z790 HERO."
+    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na ASUS Z790."
   when: cpu_check.stdout == "0" and ansible_virtualization_type == 'none'
 
-# 2. Software Installation (Roda em qualquer ambiente)
+# 2. Software Installation (Completo conforme solicitado)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -51,12 +51,10 @@
 - name: Add user to virtualization groups
   user:
     name: "{{ main_user }}"
-    groups:
-      - kvm
-      - libvirt
+    groups: [kvm, libvirt]
     append: yes
 
-# 3. Host Tuning and Storage (Apenas Hardware Real)
+# 3. Host Tuning and Storage
 - name: Configure Host Performance and Storage
   block:
     - name: Set performance profile
@@ -72,17 +70,13 @@
       ignore_errors: yes 
   when: ansible_virtualization_type == 'none'
 
-# 4. Infrastructure and Services
+# 4. Infrastructure
 - name: Create Libvirt hooks structure
   file:
     path: "/etc/libvirt/hooks/{{ item }}"
     state: directory
     mode: '0755'
-  loop:
-    - ""
-    - "qemu.d"
-    - "lxc.d"
-    - "network.d"
+  loop: ["", "qemu.d", "lxc.d", "network.d"]
 
 - name: Ensure libvirtd is started
   systemd:
