@@ -4,9 +4,18 @@
 
 This project replaces manual configurations with **Ansible**, providing idempotency and modularity for complex setups involving LVM-on-LUKS, KVM/Libvirt, and 2FA Security. The architecture is specifically optimized for the **Intel Core i9-13900K** and **ASUS ROG Z790 HERO** ecosystem, designed to safely coexist with a native Windows 11 Dual-Boot.
 
-## ⚙️ Target Hardware
+## ✨ Key Features & Intelligent Logic
 
-Developed and tested on the following high-performance specifications:
+Diferente de scripts comuns, este playbook inclui proteções de nível empresarial:
+
+* **🧠 Detecção Inteligente de Ambiente**: O sistema identifica se está rodando em **Hardware Real** ou **Máquina Virtual (VirtualBox/KVM)**. Configurações críticas de rede (Bridges/VLANs) são ignoradas em VMs para evitar perda de conectividade.
+* **🛡️ Validação de Hardware (Fail-Fast)**: Verifica se a Virtualização (VT-x) está ativa na BIOS antes de iniciar a instalação, evitando falhas silenciosas no KVM.
+* **⚡ Snapshots Assíncronos**: O backup inicial via Timeshift é executado em modo assíncrono com *timeout* de 20 minutos, garantindo que o playbook não trave se o processo de disco demorar.
+* **🚦 Auditoria de Saúde do Sistema**: Executa automaticamente `dpkg --configure -a` e `apt check` para corrigir instalações interrompidas antes de aplicar novas mudanças.
+* **🔒 Segurança Multi-Fator (2FA)**: Implementação nativa de PAM para chaves físicas (Yubikey/FIDO2) integrada ao GNOME Login e Sudo.
+* **🚀 Performance Tuning**: Perfil `tuned-adm` para Virtual Host, otimização de Swappiness (10), Inotify e limites de Log (Journald).
+
+## ⚙️ Target Hardware
 
 | Component | Model | Role |
 | --- | --- | --- |
@@ -18,101 +27,70 @@ Developed and tested on the following high-performance specifications:
 
 ## 📋 Prerequisites
 
-### 1. BIOS Settings (Dual-Boot & Security Friendly)
+### 1. BIOS Settings (Z790 Hero)
+* **Secure Boot**: Enabled.
+* **VT-d / VT-x**: **Enabled** (Obrigatório para o Playbook avançar).
+* **Re-Size BAR**: Enabled.
 
-* **Secure Boot:** **Enabled** (Fully compatible with Debian 13 and Windows 11).
-* **VT-d / VT-x:** **Enabled** (Required for KVM/QEMU).
-* **Primary Display:** **PEG / PCIe GPU**.
-* **Re-Size BAR:** **Enabled**.
+### 2. Bootstrap (One-Liner de Instalação)
+Em um Debian 13 recém-instalado, rode o comando abaixo para automatizar tudo (instalação do Ansible, Git e execução):
 
-### 2. Bootstrap (On Fresh Debian 13)
-
-Before running the automation, you must install the base tools. If you installed Debian via ISO/DVD, you might need to disable the CD-ROM repository first to avoid errors.
-
-```
-# 1. Disable CD-ROM repository (fixes 'Release file' errors)
-sudo sed -i 's/^deb cdrom/# deb cdrom/' /etc/apt/sources.list
-
-# 2. Install base requirements
-sudo apt update && sudo apt install -y ansible git
-
-```
-
-### 3. Clone Repository
-
-```
-git clone https://github.com/aleogr/debian-workstation.git
-cd debian-workstation
-
-```
+```bash
+sudo apt update && sudo apt install -y ansible git && \
+git clone [https://github.com/aleogr/debian-workstation.git](https://github.com/aleogr/debian-workstation.git) ~/workspace-debian && \
+cd ~/workspace-debian && \
+ansible-playbook -i inventory.ini playbook.yml -K
 
 ## 🚀 Usage
 
 ### 1. Configure Variables
 
-Edit the `vars.yml` file. This file centralizes your hardware-specific names. For this hardware, ensure `physical_interface` is set to `eno2`.
+Edite o arquivo `vars.yml`. Para a ASUS Z790 Hero, a interface física geralmente é `eno2` ou `enp3s0`.
 
-```
+```yaml
 main_user: "aleogr"
-physical_interface: "eno2"
+physical_interface: "enp3s0"
 vlan_id: 6
 volume_group: "vg-debian"
 
 ```
 
-### 2. Run the Playbook
+### 2. Parâmetros de Execução
 
-The script will prompt you for your **Main User Password**. This password will be securely hashed (SHA512) and applied to your Linux account.
-
-```
-# Full execution (Physical Hardware)
+```bash
+# Execução completa (Hardware Real)
 ansible-playbook -i inventory.ini playbook.yml -K
 
-# Run in VirtualBox (Skips NVMe/CPU performance tuning)
-ansible-playbook -i inventory.ini playbook.yml -K --skip-tags "hw"
+# Teste em VirtualBox (Pula automaticamente tuning de HW e Rede complexa)
+ansible-playbook -i inventory.ini playbook.yml -K
 
 ```
 
 ## 📂 Project Structure
 
-```
+```text
 debian-automation/
-├── inventory.ini         # Localhost connection definition
-├── playbook.yml          # Main Playbook (Orchestration)
-├── vars.yml              # Global Variables (Interfaces, Codename, LVM)
-├── security-key-setup.sh # Helper script for Multi-Key registration
-└── roles/                # Modular Tasks & Handlers
-    ├── repository/       # "Scorched Earth" APT policy & DEB822 sources
-    ├── system/           # Intel-Microcode, Swappiness, Inotify, Journald
-    ├── hardware/         # NVMe Gen4 Latency Fix, CPU Performance mode
-    ├── security/         # PAM Hardening, Multi-Authenticator U2F Auth
-    ├── desktop/          # Minimal GNOME Shell environment
-    ├── virtualization/   # KVM, Libvirt stack, 100% FREE LVM allocation
-    ├── network/          # NetworkManager Bridge + VLAN 6 (eno2)
-    └── snapshots/        # Timeshift automated recovery points
+├── roles/
+│   ├── repository/     # Repositórios DEB822 e limpeza de fontes legadas
+│   ├── system/         # Saúde do APT, Microcode, Swappiness, Inotify
+│   ├── hardware/       # NVMe Latency & CPU Performance Mode
+│   ├── security/       # PAM Hardening & Suporte a Chaves FIDO2
+│   ├── desktop/        # GNOME 48 Minimal + GDM3
+│   ├── virtualization/ # KVM/Libvirt + Validação de BIOS + LVM vms
+│   ├── network/        # NetworkManager Bridge + VLAN (Modo Inteligente)
+│   └── snapshots/      # Timeshift (Snapshot Inicial Assíncrono)
 
 ```
-
-## ✋ Security & Manual Steps
-
-### 1. Password Hardening
-
-The `security` role enforces **PAM Password Quality**. New passwords must be at least **12 characters** long and include Uppercase, Lowercase, Numbers, and Symbols.
-
-### 2. Registering Security Keys (2FA)
-
-The system supports any U2F/FIDO2 compatible physical keys (YubiKey, Google Titan, SoloKeys, etc.). To register your keys before enforcing them:
-
-```
-# Run the provided helper script
-sudo ./security-key-setup.sh
-
-```
-
-Once at least one key is present in `/etc/security-keys/u2f_mappings`, the Ansible playbook will automatically enable the requirement for a physical touch during Sudo and Login.
 
 ## ⚠️ Disclaimer
 
-**Idempotency:** This playbook is idempotent. You can run it multiple times to ensure your system stays in the desired state.
+**Idempotência**: Você pode rodar este playbook múltiplas vezes. Ele apenas aplicará as mudanças se o sistema sair do estado desejado.
+**Segurança de Disco**: O volume LVM `lv-vms` é criado apenas no espaço livre do VG especificado, protegendo outras partições (como Windows 11).
 
-**Disk Safety:** The `virtualization` role creates a Logical Volume (`lv-vms`) inside your existing Volume Group. It does **not** touch secondary physical disks, keeping your Windows 11 partition safe.
+```
+
+
+
+Boa sorte na sua nova workstation Z790! Gostaria que eu explicasse algum detalhe específico sobre como o suporte a chaves FIDO2 (2FA) foi implementado na role de segurança?
+
+```
