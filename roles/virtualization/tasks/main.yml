@@ -1,17 +1,18 @@
 ---
-# 1. Hardware Validation (Hardware Real Only)
+# 1. Hardware Validation (Apenas Hardware Real)
 - name: Verify CPU virtualization support (VT-x/AMD-V)
   shell: grep -E 'vmx|svm' /proc/cpuinfo
   register: cpu_virt
   ignore_errors: yes
   changed_when: false
 
-- name: Fail if virtualization is disabled in BIOS
+- name: Check BIOS Virtualization status
   fail:
     msg: "ERRO: Virtualização desligada na BIOS. Ative VT-x/SVM na sua Z790!"
+  # Só falha se for hardware real E não encontrar as flags de CPU
   when: cpu_virt.rc != 0 and ansible_virtualization_type == 'none'
 
-# 2. Software Installation
+# 2. Software Installation (Roda em ambos, útil para gerenciar VMs remotas na VM)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -49,6 +50,8 @@
 - name: Set performance profile
   command: tuned-adm profile virtual-host
   changed_when: false
+  # Tuned virtual-host só faz sentido em hosts reais
+  when: ansible_virtualization_type == 'none'
 
 - name: Create Libvirt hooks structure
   file:
@@ -67,8 +70,9 @@
     lv: "{{ vm_lv_name }}"
     size: 100%FREE
     state: present
-  # Evita erro de 'shrinking' se o volume já existir
+  # Ignora se o VG não existir (comum em VMs de teste)
   ignore_errors: yes
+  when: ansible_virtualization_type == 'none'
 
 - name: Ensure libvirtd is started
   systemd:
