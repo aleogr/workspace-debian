@@ -1,16 +1,12 @@
 ---
-# 1. Update PAM Configuration
 - name: Update PAM
   command: pam-auth-update --package
-  # Usamos changed_when: true porque este comando sempre precisa rodar se notificado
   changed_when: true
 
-# 2. Update Initramfs
 - name: Update Initramfs
   command: update-initramfs -u
   listen: "refresh security"
 
-# 3. Reload Systemd Daemon
 - name: Reload Systemd
   systemd:
     daemon_reload: yes
