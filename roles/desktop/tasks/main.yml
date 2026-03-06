@@ -7,8 +7,8 @@
       - gdm3
     state: present
 
-- name: Ensure GDM3 is enabled and started
+- name: Ensure GDM3 is enabled but NOT started yet
   systemd:
     name: gdm3
     enabled: yes
-    state: started
+    state: stopped
