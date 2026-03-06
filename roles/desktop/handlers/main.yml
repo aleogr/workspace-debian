@@ -1,7 +1,7 @@
 ---
 - name: Restart GDM
   systemd:
-    name: gdm
+    name: gdm3
     state: restarted
 
 - name: Reload systemd
