@@ -1,8 +1,7 @@
 ---
 - name: Restart GDM
-  systemd:
-    name: gdm3
-    state: restarted
+  debug:
+    msg: "GDM restart skipped to prevent session drop. Reboot manually at the end."
 
 - name: Reload systemd
   systemd:
