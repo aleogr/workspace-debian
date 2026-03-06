@@ -1,18 +1,23 @@
 ---
-# 1. Hardware Validation (Apenas Hardware Real)
-- name: Verify CPU virtualization support (VT-x/AMD-V)
-  shell: grep -E 'vmx|svm' /proc/cpuinfo
-  register: cpu_virt
-  ignore_errors: yes
-  changed_when: false
+# 1. Hardware Validation (Tratamento elegante para evitar logs vermelhos em VMs)
+- name: Hardware Virtualization Check
+  block:
+    - name: Verify CPU virtualization support (VT-x/AMD-V)
+      shell: grep -E 'vmx|svm' /proc/cpuinfo
+      register: cpu_virt
+      changed_when: false
+  rescue:
+    - name: Notify virtualization status (Guest Mode)
+      debug:
+        msg: "INFO: Virtualização aninhada não detectada. Isso é normal e esperado em Máquinas Virtuais."
+      when: ansible_virtualization_type != 'none'
 
-- name: Check BIOS Virtualization status
-  fail:
-    msg: "ERRO: Virtualização desligada na BIOS. Ative VT-x/SVM na sua Z790!"
-  # Só falha se for hardware real E não encontrar as flags de CPU
-  when: cpu_virt.rc != 0 and ansible_virtualization_type == 'none'
+    - name: Fail if virtualization is disabled in BIOS (Physical Hardware)
+      fail:
+        msg: "ERRO CRÍTICO: Virtualização desligada na BIOS. Ative VT-x/SVM na sua placa-mãe Z790!"
+      when: ansible_virtualization_type == 'none'
 
-# 2. Software Installation (Roda em ambos, útil para gerenciar VMs remotas na VM)
+# 2. Software Installation (Completo: Roda em ambos os ambientes)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -47,12 +52,23 @@
       - libvirt
     append: yes
 
-- name: Set performance profile
-  command: tuned-adm profile virtual-host
-  changed_when: false
-  # Tuned virtual-host só faz sentido em hosts reais
+# 3. Host Tuning and Storage (Apenas Hardware Real)
+- name: Configure Host Performance and Storage
+  block:
+    - name: Set performance profile
+      command: tuned-adm profile virtual-host
+      changed_when: false
+
+    - name: Create Logical Volume for VMs
+      lvol:
+        vg: "{{ volume_group }}"
+        lv: "{{ vm_lv_name }}"
+        size: 100%FREE
+        state: present
+      ignore_errors: yes 
   when: ansible_virtualization_type == 'none'
 
+# 4. Infrastructure and Services
 - name: Create Libvirt hooks structure
   file:
     path: "/etc/libvirt/hooks/{{ item }}"
@@ -63,16 +79,6 @@
     - "qemu.d"
     - "lxc.d"
     - "network.d"
-
-- name: Create Logical Volume for VMs
-  lvol:
-    vg: "{{ volume_group }}"
-    lv: "{{ vm_lv_name }}"
-    size: 100%FREE
-    state: present
-  # Ignora se o VG não existir (comum em VMs de teste)
-  ignore_errors: yes
-  when: ansible_virtualization_type == 'none'
 
 - name: Ensure libvirtd is started
   systemd:
