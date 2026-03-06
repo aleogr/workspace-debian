@@ -65,11 +65,7 @@ volume_group: "vg-debian"
 The script will prompt you for your **Main User Password**. This password will be securely hashed (SHA512) and applied to your Linux account.
 
 ```
-# Full execution (Physical Hardware)
 ansible-playbook -i inventory.ini playbook.yml -K
-
-# Run in VirtualBox (Skips NVMe/CPU performance tuning)
-ansible-playbook -i inventory.ini playbook.yml -K --skip-tags "hw"
 
 ```
 
