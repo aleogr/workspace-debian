@@ -1,19 +1,14 @@
 ---
-# 1. Instalação das ferramentas
 - name: Install Timeshift
   apt:
-    pkg:
-      - timeshift
-      - inotify-tools
+    pkg: [timeshift, inotify-tools]
     state: present
 
-# 2. Identificação dinâmica do hardware
 - name: Get Root Partition UUID
   command: grub-probe --target=fs_uuid /
   register: root_uuid
   changed_when: false
 
-# 3. Configuração do JSON com o UUID injetado
 - name: Configure Timeshift JSON
   copy:
     dest: /etc/timeshift/timeshift.json
@@ -42,7 +37,6 @@
     mode: '0644'
     force: yes
 
-# 4. Criação do Snapshot inicial (Corrigido para --scripted)
 - name: Create initial system snapshot (Asynchronous)
   command: timeshift --create --scripted --comments "Initial Provisioning via Ansible" --tags D
   async: 1200
