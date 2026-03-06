@@ -41,8 +41,8 @@ sudo apt update && sudo apt install -y ansible git
 ### 3. Clone Repository
 
 ```
-git clone https://github.com/aleogr/debian-workstation.git
-cd debian-workstation
+git clone https://github.com/aleogr/workspace-debian.git
+cd workspace-debian
 
 ```
 
