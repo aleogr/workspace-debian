@@ -1,14 +1,13 @@
 ---
-# Agrupamos as otimizações em um bloco para facilitar o 'skip' total em VMs
 - name: Physical Hardware Performance Tuning
   block:
-    - name: Optimize Kernel Parameters in GRUB (NVMe Latency & Split Lock)
+    - name: "Optimize Kernel Parameters in GRUB (NVMe & Split Lock)"
       ansible.builtin.lineinfile:
         path: /etc/default/grub
         regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
         line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nvme_core.default_ps_max_latency_us=0 split_lock_detect=off"'
         state: present
-      notify: Update GRUB
+      notify: Update grub
 
     - name: Install CPU management tools
       apt:
@@ -30,6 +29,4 @@
           - nvme-cli
           - smartmontools
         state: present
-  
-  # O bloco inteiro é ignorado se detectar uma VM
   when: ansible_virtualization_type == 'none'
