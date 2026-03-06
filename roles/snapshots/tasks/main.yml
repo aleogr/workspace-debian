@@ -34,8 +34,10 @@
     mode: '0644'
     force: no
 
-- name: Create initial system snapshot
+- name: Create initial system snapshot (Asynchronous)
   command: timeshift --create --comments "Initial Provisioning via Ansible" --tags D
+  async: 1200          # Tempo máximo de espera: 20 minutos (segurança para NVMe)
+  poll: 15             # Verifica o status a cada 15 segundos
   register: timeshift_result
-  changed_when: "'Snapshot created successfully' in timeshift_result.stdout"
-  ignore_errors: yes
+  changed_when: "'Snapshot created successfully' in timeshift_result.stdout or timeshift_result.rc == 0"
+  ignore_errors: yes   # Evita que o playbook pare se o snapshot falhar por espaço em disco
