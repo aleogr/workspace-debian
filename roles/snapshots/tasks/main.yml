@@ -7,7 +7,7 @@
       - inotify-tools
     state: present
 
-# 2. Identificação dinâmica do hardware para evitar perguntas do Timeshift
+# 2. Identificação dinâmica do hardware
 - name: Get Root Partition UUID
   command: grub-probe --target=fs_uuid /
   register: root_uuid
@@ -40,14 +40,13 @@
         "rrsync_mode": "true"
       }
     mode: '0644'
-    force: yes  # Alterado para 'yes' para garantir que o UUID correto seja aplicado
+    force: yes
 
-# 4. Criação do Snapshot inicial em modo não-interativo (--script)
+# 4. Criação do Snapshot inicial (Corrigido para --scripted)
 - name: Create initial system snapshot (Asynchronous)
-  command: timeshift --create --script --comments "Initial Provisioning via Ansible" --tags D
-  async: 1200          # Tempo máximo de espera: 20 minutos (segurança para NVMe)
-  poll: 15             # Verifica o status a cada 15 segundos
+  command: timeshift --create --scripted --comments "Initial Provisioning via Ansible" --tags D
+  async: 1200
+  poll: 15
   register: timeshift_result
-  # Verifica sucesso tanto por string quanto por código de retorno
   changed_when: "'Snapshot created successfully' in timeshift_result.stdout or timeshift_result.rc == 0"
-  ignore_errors: yes   # Evita travas se o disco estiver muito cheio na VM
+  ignore_errors: yes
