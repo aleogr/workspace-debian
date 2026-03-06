@@ -1,12 +1,12 @@
 ---
-# 1. Cleanup old configurations
+# 1. Cleanup
 - name: Create backup directory for old repository files
   file:
     path: /etc/apt/sources.list.d/backup_old
     state: directory
     mode: '0755'
 
-- name: Move existing list files to backup to prevent conflicts
+- name: Move existing list files to backup
   shell: |
     mv /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/backup_old/ 2>/dev/null || true
     mv /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/backup_old/ 2>/dev/null || true
@@ -19,7 +19,7 @@
     dest: /etc/apt/sources.list
     content: "# Main repositories moved to /etc/apt/sources.list.d/debian.sources\n"
 
-# 2. Rebuild repositories in DEB822 format
+# 2. Rebuild DEB822
 - name: Create clean Debian base repositories
   copy:
     dest: /etc/apt/sources.list.d/debian.sources
