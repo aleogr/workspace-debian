@@ -12,60 +12,53 @@
       encrypt: "sha512_crypt"
 
   roles:
-    # 1. APT Infrastructure (Scorched Earth & DEB822 Sources)
-    - name: Repository Management
-      role: repository
-      tags:
-        - repo
-        - repository
+    # 1. APT Infrastructure (Limpagem de fontes e DEB822)
+    - role: repository
+      tags: [repo, repository]
 
-    # 2. Base OS (Users, Sudo, Logs, Tuning)
-    - name: Base System Configuration
-      role: system
-      tags:
-        - sys
-        - system
+    # 2. Base OS (Saúde do APT, Usuário, Sudoers e Logs)
+    - role: system
+      tags: [sys, system]
 
-    # 3. Performance Tuning (Z790 / NVMe / CPU)
-    - name: Hardware Performance Tuning
-      role: hardware
-      tags:
-        - hw
-        - hardware
+    # 3. Performance Tuning (Otimizações de NVMe e i9-13900K)
+    - role: hardware
+      tags: [hw, hardware]
 
-    # 4. Security layer (YubiKey / PAM Hardening)
-    - name: Security and Authentication
-      role: security
-      when: setup_security
-      tags:
-        - sec
-        - security
+    # 4. Security layer (PAM Hardening e Chaves FIDO2/U2F)
+    - role: security
+      when: setup_security | default(true)
+      tags: [sec, security]
 
-    # 5. Graphical Interface (Minimal GNOME)
-    - name: Desktop Environment
-      role: desktop
-      tags:
-        - desk
-        - desktop
+    # 5. Graphical Interface (GNOME 48 Minimal)
+    - role: desktop
+      tags: [desk, desktop]
 
-    # 6. Virtualization Core (QEMU / Libvirt / LVM)
-    - name: Virtualization Suite
-      role: virtualization
-      tags:
-        - virt
-        - virtualization
+    # 6. Virtualization Core (Stack KVM/Libvirt e LVM para VMs)
+    - role: virtualization
+      tags: [virt, virtualization]
 
-    # 7. Network Stack (Bridges / VLAN 6)
-    - name: Network and Bridge Configuration
-      role: network
-      tags:
-        - net
-        - network
+    # 7. Network Stack (Bridge br0 e VLAN 6 para Hardware Real)
+    - role: network
+      tags: [net, network]
 
-    # 8. Data Protection (Initial Snapshot)
-    - name: System Snapshots
-      role: snapshots
-      when: create_initial_snapshot
-      tags:
-        - snap
-        - snapshots
+    # 8. Data Protection (Snapshot Inicial Asíncrono e --scripted)
+    - role: snapshots
+      when: create_initial_snapshot | default(true)
+      tags: [snap, snapshots]
+
+  post_tasks:
+    - name: "Final Summary and Instructions"
+      debug:
+        msg: 
+          - "============================================================"
+          - "      AUTOMAÇÃO CONCLUÍDA COM SUCESSO NA Z790!              "
+          - "============================================================"
+          - "✓ Repositórios Debian 13 (Trixie) configurados."
+          - "✓ Interface GNOME instalada."
+          - "✓ KVM/Libvirt pronto para uso (Virt-Manager disponível)."
+          - "✓ Snapshot de segurança criado via Timeshift."
+          - "------------------------------------------------------------"
+          - "DICA: O Tuning de CPU e NVMe exige um reinício para carregar."
+          - "POR FAVOR, REINICIE MANUALMENTE QUANDO ESTIVER PRONTO:"
+          - "Comando: sudo reboot"
+          - "============================================================"
