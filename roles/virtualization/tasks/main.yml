@@ -54,7 +54,7 @@
     groups: [kvm, libvirt]
     append: yes
 
-# 3. LVM Storage Management (Forçado para Host e Sandbox)
+# 3. LVM Storage Management (Lógica de Força Total para Host e Sandbox)
 - name: Check for Volume Group (vg-debian)
   command: vgs vg-debian
   register: vg_check
@@ -66,19 +66,21 @@
     - name: Set performance profile
       command: tuned-adm profile virtual-host
       changed_when: false
+      failed_when: false
 
-    - name: Create Logical Volume lv-vms (Forçado via Shell)
+    - name: Force create Logical Volume lv-vms
       shell: |
         if ! lvs /dev/vg-debian/lv-vms; then
-          lvcreate -l 100%FREE -n lv-vms vg-debian
+          lvcreate -l 100%FREE -n lv-vms vg-debian -y
         fi
       register: lvm_force_creation
       changed_when: "'created' in lvm_force_creation.stdout"
 
-    - name: Format the new VM volume as EXT4
+    - name: Format the new VM volume as EXT4 (Force if changed)
       community.general.filesystem:
         fstype: ext4
         dev: "/dev/vg-debian/lv-vms"
+        force: yes
       when: lvm_force_creation.changed
 
     - name: Create mount point for VM storage
@@ -94,6 +96,7 @@
         fstype: ext4
         state: mounted
 
+  # Só executa se o Volume Group 'vg-debian' for encontrado no sistema
   when: vg_check.rc == 0
 
 # 4. Libvirt Infrastructure and Pool Configuration
@@ -121,7 +124,7 @@
         virsh pool-start default
       register: pool_init
       changed_when: "'defined' in pool_init.stdout or 'started' in pool_init.stdout"
-      # Executa apenas se o ponto de montagem estiver ativo
+      # Proteção: só define o pool se detectar que o ponto de montagem está ativo no sistema
       when: >
         (lvm_force_creation is defined and not lvm_force_creation.failed) or
         (ansible_mounts | selectattr('mount', 'equalto', '/mnt/vms-storage') | list | length > 0)
