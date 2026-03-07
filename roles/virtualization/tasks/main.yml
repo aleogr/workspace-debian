@@ -1,5 +1,5 @@
 ---
-# 1. Hardware Validation (Lógica Ultra-Clean para Host e VM)
+# 1. Hardware Validation (Lógica Ultra-Clean)
 - name: Check CPU Virtualization Flags
   shell: grep -cE 'vmx|svm' /proc/cpuinfo
   register: cpu_check
@@ -21,7 +21,7 @@
     msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na sua ASUS Z790."
   when: cpu_check.stdout == "0" and ansible_virtualization_type == 'none'
 
-# 2. Software Installation (Suporte Completo a Arquiteturas)
+# 2. Software Installation (Full Architecture Support)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -54,7 +54,7 @@
     groups: [kvm, libvirt]
     append: yes
 
-# 3. LVM Storage Management (Correção para Sandbox e Host)
+# 3. LVM Storage Management (Forçado para Host e Sandbox)
 - name: Check for Volume Group (vg-debian)
   command: vgs vg-debian
   register: vg_check
@@ -67,19 +67,19 @@
       command: tuned-adm profile virtual-host
       changed_when: false
 
-    - name: Create Logical Volume using all free space (VFree)
-      community.general.lvol:
-        vg: "vg-debian"
-        lv: lv-vms
-        size: 100%FREE
-        state: present
-      register: lvm_creation
+    - name: Create Logical Volume lv-vms (Forçado via Shell)
+      shell: |
+        if ! lvs /dev/vg-debian/lv-vms; then
+          lvcreate -l 100%FREE -n lv-vms vg-debian
+        fi
+      register: lvm_force_creation
+      changed_when: "'created' in lvm_force_creation.stdout"
 
     - name: Format the new VM volume as EXT4
       community.general.filesystem:
         fstype: ext4
         dev: "/dev/vg-debian/lv-vms"
-      when: lvm_creation.changed
+      when: lvm_force_creation.changed
 
     - name: Create mount point for VM storage
       file:
@@ -94,7 +94,6 @@
         fstype: ext4
         state: mounted
 
-  # Só executa se o comando 'vgs vg-debian' retornar sucesso (rc == 0)
   when: vg_check.rc == 0
 
 # 4. Libvirt Infrastructure and Pool Configuration
@@ -122,9 +121,9 @@
         virsh pool-start default
       register: pool_init
       changed_when: "'defined' in pool_init.stdout or 'started' in pool_init.stdout"
-      # Executa se o volume foi criado agora OU se já está montado de uma execução anterior
+      # Executa apenas se o ponto de montagem estiver ativo
       when: >
-        (lvm_creation is defined and lvm_creation is success) or 
+        (lvm_force_creation is defined and not lvm_force_creation.failed) or
         (ansible_mounts | selectattr('mount', 'equalto', '/mnt/vms-storage') | list | length > 0)
   
   when: vg_check.rc == 0
