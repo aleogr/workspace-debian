@@ -1,5 +1,5 @@
 ---
-# 1. Hardware Validation (Lógica Ultra-Clean)
+# 1. Hardware Validation
 - name: Check CPU Virtualization Flags
   shell: grep -cE 'vmx|svm' /proc/cpuinfo
   register: cpu_check
@@ -18,10 +18,10 @@
 
 - name: "STOP: BIOS Configuration Error"
   fail:
-    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na sua ASUS Z790."
+    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na ASUS Z790."
   when: cpu_check.stdout == "0" and ansible_virtualization_type == 'none'
 
-# 2. Software Installation (Full Architecture Support)
+# 2. Software Installation (Completo conforme solicitado)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -54,79 +54,32 @@
     groups: [kvm, libvirt]
     append: yes
 
-# 3. LVM Storage Management (Lógica de Força Total para Host e Sandbox)
-- name: Check for Volume Group (vg-debian)
-  command: vgs vg-debian
-  register: vg_check
-  failed_when: false
-  changed_when: false
-
-- name: Configure Dedicated LVM Storage for VMs
+# 3. Host Tuning and Storage
+- name: Configure Host Performance and Storage
   block:
     - name: Set performance profile
       command: tuned-adm profile virtual-host
       changed_when: false
-      failed_when: false
 
-    - name: Force create Logical Volume lv-vms
-      shell: |
-        if ! lvs /dev/vg-debian/lv-vms; then
-          lvcreate -l 100%FREE -n lv-vms vg-debian -y
-        fi
-      register: lvm_force_creation
-      changed_when: "'created' in lvm_force_creation.stdout"
+    - name: Create Logical Volume for VMs
+      lvol:
+        vg: "{{ volume_group }}"
+        lv: "{{ vm_lv_name }}"
+        size: 100%FREE
+        state: present
+      ignore_errors: yes 
+  when: ansible_virtualization_type == 'none'
 
-    - name: Format the new VM volume as EXT4 (Force if changed)
-      community.general.filesystem:
-        fstype: ext4
-        dev: "/dev/vg-debian/lv-vms"
-        force: yes
-      when: lvm_force_creation.changed
+# 4. Infrastructure
+- name: Create Libvirt hooks structure
+  file:
+    path: "/etc/libvirt/hooks/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop: ["", "qemu.d", "lxc.d", "network.d"]
 
-    - name: Create mount point for VM storage
-      file:
-        path: /mnt/vms-storage
-        state: directory
-        mode: '0755'
-
-    - name: Mount VM storage and add to FSTAB
-      ansible.posix.mount:
-        path: /mnt/vms-storage
-        src: "/dev/vg-debian/lv-vms"
-        fstype: ext4
-        state: mounted
-
-  # Só executa se o Volume Group 'vg-debian' for encontrado no sistema
-  when: vg_check.rc == 0
-
-# 4. Libvirt Infrastructure and Pool Configuration
-- name: Configure Libvirt Services and Storage Pool
-  block:
-    - name: Create Libvirt hooks structure
-      file:
-        path: "/etc/libvirt/hooks/{{ item }}"
-        state: directory
-        mode: '0755'
-      loop: ["", "qemu.d", "lxc.d", "network.d"]
-
-    - name: Ensure libvirtd is started
-      systemd:
-        name: libvirtd
-        enabled: yes
-        state: started
-
-    - name: Define Libvirt Storage Pool on the new LVM Volume
-      shell: |
-        virsh pool-destroy default || true
-        virsh pool-undefine default || true
-        virsh pool-define-as default dir --target /mnt/vms-storage
-        virsh pool-autostart default
-        virsh pool-start default
-      register: pool_init
-      changed_when: "'defined' in pool_init.stdout or 'started' in pool_init.stdout"
-      # Proteção: só define o pool se detectar que o ponto de montagem está ativo no sistema
-      when: >
-        (lvm_force_creation is defined and not lvm_force_creation.failed) or
-        (ansible_mounts | selectattr('mount', 'equalto', '/mnt/vms-storage') | list | length > 0)
-  
-  when: vg_check.rc == 0
+- name: Ensure libvirtd is started
+  systemd:
+    name: libvirtd
+    enabled: yes
+    state: started
