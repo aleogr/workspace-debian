@@ -1,5 +1,5 @@
 ---
-# 1. Hardware Validation (Lógica Ultra-Clean)
+# 1. Hardware Validation (Lógica Ultra-Clean para Host e VM)
 - name: Check CPU Virtualization Flags
   shell: grep -cE 'vmx|svm' /proc/cpuinfo
   register: cpu_check
@@ -21,7 +21,7 @@
     msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na sua ASUS Z790."
   when: cpu_check.stdout == "0" and ansible_virtualization_type == 'none'
 
-# 2. Software Installation (Full Architecture Support)
+# 2. Software Installation (Suporte Completo a Arquiteturas)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -54,7 +54,13 @@
     groups: [kvm, libvirt]
     append: yes
 
-# 3. LVM Storage Management (Inteligente para Host e Sandbox)
+# 3. LVM Storage Management (Correção para Sandbox e Host)
+- name: Check for Volume Group (vg-debian)
+  command: vgs vg-debian
+  register: vg_check
+  failed_when: false
+  changed_when: false
+
 - name: Configure Dedicated LVM Storage for VMs
   block:
     - name: Set performance profile
@@ -63,7 +69,7 @@
 
     - name: Create Logical Volume using all free space (VFree)
       community.general.lvol:
-        vg: "{{ volume_group | default('vg-debian') }}"
+        vg: "vg-debian"
         lv: lv-vms
         size: 100%FREE
         state: present
@@ -72,7 +78,7 @@
     - name: Format the new VM volume as EXT4
       community.general.filesystem:
         fstype: ext4
-        dev: "/dev/{{ volume_group | default('vg-debian') }}/lv-vms"
+        dev: "/dev/vg-debian/lv-vms"
       when: lvm_creation.changed
 
     - name: Create mount point for VM storage
@@ -84,14 +90,12 @@
     - name: Mount VM storage and add to FSTAB
       ansible.posix.mount:
         path: /mnt/vms-storage
-        src: "/dev/{{ volume_group | default('vg-debian') }}/lv-vms"
+        src: "/dev/vg-debian/lv-vms"
         fstype: ext4
         state: mounted
 
-  # Condição expandida: roda se for hardware real OU se a VM tiver o VG vg-debian com espaço
-  when: >
-    ansible_virtualization_type == 'none' or 
-    (ansible_lvm is defined and 'vg-debian' in ansible_lvm.vgs)
+  # Só executa se o comando 'vgs vg-debian' retornar sucesso (rc == 0)
+  when: vg_check.rc == 0
 
 # 4. Libvirt Infrastructure and Pool Configuration
 - name: Configure Libvirt Services and Storage Pool
@@ -118,9 +122,9 @@
         virsh pool-start default
       register: pool_init
       changed_when: "'defined' in pool_init.stdout or 'started' in pool_init.stdout"
-      # Proteção: só tenta criar o pool se o volume estiver montado
-      when: lvm_creation is success or (ansible_mounts | selectattr('mount', 'equalto', '/mnt/vms-storage') | list | length > 0)
-
-  when: >
-    ansible_virtualization_type == 'none' or 
-    (ansible_lvm is defined and 'vg-debian' in ansible_lvm.vgs)
+      # Executa se o volume foi criado agora OU se já está montado de uma execução anterior
+      when: >
+        (lvm_creation is defined and lvm_creation is success) or 
+        (ansible_mounts | selectattr('mount', 'equalto', '/mnt/vms-storage') | list | length > 0)
+  
+  when: vg_check.rc == 0
