@@ -1,5 +1,5 @@
 ---
-# 1. Hardware Validation
+# 1. Hardware Validation (Lógica Ultra-Clean)
 - name: Check CPU Virtualization Flags
   shell: grep -cE 'vmx|svm' /proc/cpuinfo
   register: cpu_check
@@ -8,20 +8,15 @@
 
 - name: "Report Virtualization Status (Physical Hardware)"
   debug:
-    msg: "OK: Virtualização (VT-x/SVM) detectada com sucesso no hardware real."
+    msg: "OK: Virtualização (VT-x/SVM) detectada no hardware real."
   when: cpu_check.stdout != "0" and ansible_virtualization_type == 'none'
-
-- name: "Report Virtualization Status (Guest/VM)"
-  debug:
-    msg: "INFO: Rodando em ambiente virtual. Virtualização aninhada não disponível (esperado)."
-  when: cpu_check.stdout == "0" and ansible_virtualization_type != 'none'
 
 - name: "STOP: BIOS Configuration Error"
   fail:
-    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na ASUS Z790."
+    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na sua ASUS Z790."
   when: cpu_check.stdout == "0" and ansible_virtualization_type == 'none'
 
-# 2. Software Installation (Completo conforme solicitado)
+# 2. Software Installation (Full Architecture Support - Todos os pacotes mantidos)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -31,8 +26,8 @@
       - qemu-system-aarch64
       - qemu-system-mips
       - qemu-system-ppc
-      - qemu-system-s390x
       - qemu-system-riscv
+      - qemu-system-s390x
       - qemu-system-alpha
       - qemu-system-sparc
       - qemu-system-m68k
@@ -54,32 +49,79 @@
     groups: [kvm, libvirt]
     append: yes
 
-# 3. Host Tuning and Storage
-- name: Configure Host Performance and Storage
+# 3. LVM Storage Management (Híbrido: Host e Sandbox)
+- name: Check for Volume Group ({{ volume_group }})
+  command: vgs {{ volume_group }}
+  register: vg_check
+  failed_when: false
+  changed_when: false
+
+- name: Configure Dedicated LVM Storage
   block:
     - name: Set performance profile
       command: tuned-adm profile virtual-host
       changed_when: false
+      failed_when: false
 
-    - name: Create Logical Volume for VMs
-      lvol:
-        vg: "{{ volume_group }}"
-        lv: "{{ vm_lv_name }}"
-        size: 100%FREE
-        state: present
-      ignore_errors: yes 
-  when: ansible_virtualization_type == 'none'
+    - name: Ensure Logical Volume exists
+      shell: |
+        if ! lvs /dev/{{ volume_group }}/{{ vm_lv_name }}; then
+          lvcreate -l 100%FREE -n {{ vm_lv_name }} {{ volume_group }} -y
+        fi
+      register: lvm_status
+      changed_when: "'created' in lvm_status.stdout"
 
-# 4. Infrastructure
-- name: Create Libvirt hooks structure
-  file:
-    path: "/etc/libvirt/hooks/{{ item }}"
-    state: directory
-    mode: '0755'
-  loop: ["", "qemu.d", "lxc.d", "network.d"]
+    - name: Format the volume as EXT4 (Apenas se recém-criado)
+      community.general.filesystem:
+        fstype: ext4
+        dev: "/dev/{{ volume_group }}/{{ vm_lv_name }}"
+      when: lvm_status.changed
 
-- name: Ensure libvirtd is started
-  systemd:
-    name: libvirtd
-    enabled: yes
-    state: started
+    - name: Ensure mount point directory exists
+      file:
+        path: /mnt/vms-storage
+        state: directory
+        mode: '0755'
+
+    - name: PERSISTENT MOUNT: Add to FSTAB and mount
+      ansible.posix.mount:
+        path: /mnt/vms-storage
+        src: "/dev/{{ volume_group }}/{{ vm_lv_name }}"
+        fstype: ext4
+        opts: defaults
+        dump: '0'
+        passno: '2'
+        state: mounted
+
+  when: vg_check.rc == 0
+
+# 4. Libvirt Pool Sync (Garante que o Libvirt veja o disco novo)
+- name: Sync Libvirt Storage Pool
+  block:
+    - name: Create Libvirt hooks structure
+      file:
+        path: "/etc/libvirt/hooks/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: ["", "qemu.d", "lxc.d", "network.d"]
+
+    - name: Ensure libvirtd is started
+      systemd:
+        name: libvirtd
+        enabled: yes
+        state: started
+
+    - name: Define and Start Libvirt Pool
+      shell: |
+        virsh pool-destroy default || true
+        virsh pool-undefine default || true
+        virsh pool-define-as default dir --target /mnt/vms-storage
+        virsh pool-autostart default
+        virsh pool-start default
+      register: pool_init
+      changed_when: "'defined' in pool_init.stdout"
+      when: >
+        (lvm_status is defined and not lvm_status.failed) or
+        (ansible_mounts | selectattr('mount', 'equalto', '/mnt/vms-storage') | list | length > 0)
+  
+  when: vg_check.rc == 0
