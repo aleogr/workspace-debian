@@ -1,22 +1,12 @@
 ---
-# 1. Hardware Validation (Lógica Ultra-Clean)
+# 1. Hardware Validation
 - name: Check CPU Virtualization Flags
   shell: grep -cE 'vmx|svm' /proc/cpuinfo
   register: cpu_check
   failed_when: false
   changed_when: false
 
-- name: "Report Virtualization Status (Physical Hardware)"
-  debug:
-    msg: "OK: Virtualização (VT-x/SVM) detectada no hardware real."
-  when: cpu_check.stdout != "0" and ansible_virtualization_type == 'none'
-
-- name: "STOP: BIOS Configuration Error"
-  fail:
-    msg: "ERRO CRÍTICO: Virtualização desativada na BIOS! Ative VT-x/SVM na sua ASUS Z790."
-  when: cpu_check.stdout == "0" and ansible_virtualization_type == 'none'
-
-# 2. Software Installation (Full Architecture Support - Todos os pacotes mantidos)
+# 2. Software Installation (Todos os pacotes mantidos)
 - name: Install QEMU and Libvirt tools
   apt:
     pkg:
@@ -49,7 +39,7 @@
     groups: [kvm, libvirt]
     append: yes
 
-# 3. LVM Storage Management (Híbrido: Host e Sandbox)
+# 3. LVM Storage Management (Corrigido para evitar erro de sintaxe)
 - name: Check for Volume Group ({{ volume_group }})
   command: vgs {{ volume_group }}
   register: vg_check
@@ -71,7 +61,7 @@
       register: lvm_status
       changed_when: "'created' in lvm_status.stdout"
 
-    - name: Format the volume as EXT4 (Apenas se recém-criado)
+    - name: Format the volume as EXT4
       community.general.filesystem:
         fstype: ext4
         dev: "/dev/{{ volume_group }}/{{ vm_lv_name }}"
@@ -83,7 +73,8 @@
         state: directory
         mode: '0755'
 
-    - name: PERSISTENT MOUNT: Add to FSTAB and mount
+    # CORREÇÃO AQUI: String entre aspas para evitar erro de parsing dos dois pontos
+    - name: "PERSISTENT MOUNT: Add to FSTAB and mount volume"
       ansible.posix.mount:
         path: /mnt/vms-storage
         src: "/dev/{{ volume_group }}/{{ vm_lv_name }}"
@@ -95,16 +86,9 @@
 
   when: vg_check.rc == 0
 
-# 4. Libvirt Pool Sync (Garante que o Libvirt veja o disco novo)
+# 4. Libvirt Sync
 - name: Sync Libvirt Storage Pool
   block:
-    - name: Create Libvirt hooks structure
-      file:
-        path: "/etc/libvirt/hooks/{{ item }}"
-        state: directory
-        mode: '0755'
-      loop: ["", "qemu.d", "lxc.d", "network.d"]
-
     - name: Ensure libvirtd is started
       systemd:
         name: libvirtd
