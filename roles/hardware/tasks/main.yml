@@ -1,17 +1,24 @@
 ---
-- name: Physical Hardware Performance Tuning
+- name: Physical Hardware Performance Tuning (ASUS Z790 HERO)
   block:
-    - name: "Optimize Kernel Parameters in GRUB (NVMe & Split Lock)"
+    - name: "Optimize Kernel Parameters in GRUB (NVMe & Performance)"
       ansible.builtin.lineinfile:
         path: /etc/default/grub
         regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
-        line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nvme_core.default_ps_max_latency_us=0 split_lock_detect=off"'
+        # Adicionado pcie_aspm=off para evitar problemas de latência em placas high-end
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nvme_core.default_ps_max_latency_us=0 split_lock_detect=off pcie_aspm=off"'
         state: present
       notify: Update grub
 
-    - name: Install CPU management tools
+    - name: Install CPU and ROG specific management tools
       apt:
-        name: cpufrequtils
+        pkg:
+          - intel-microcode     # Essencial para CPUs 13ª/14ª Gen
+          - cpufrequtils
+          - firmware-realtek    # Drivers de áudio/rede
+          - firmware-iwlwifi    # Driver Wi-Fi 6E Intel
+          - firmware-libertas
+          - bluez               # Stack Bluetooth
         state: present
 
     - name: Set CPU Governor to Performance mode
@@ -22,11 +29,17 @@
         state: present
       notify: Restart cpufrequtils
 
-    - name: Install hardware monitoring tools
+    - name: Install hardware monitoring and NVMe tools
       apt:
         pkg:
           - lm-sensors
           - nvme-cli
           - smartmontools
+          - i2c-tools         # Necessário para ler o RGB e sensores da ASUS
         state: present
-  when: ansible_virtualization_type == 'none'
+
+    - name: Configure Sensors for Z790
+      shell: sensors-detect --auto
+      changed_when: false
+
+  when: ansible_virtualization_type == 'none' # Garante que só rode no host real
